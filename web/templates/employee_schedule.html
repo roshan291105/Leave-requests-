@@ -1,0 +1,8 @@
+{% extends 'base.html' %}
+{% block title %}My Schedule · Dayora{% endblock %}
+{% block heading %}My work schedule{% endblock %}
+{% block content %}
+<section class="schedule-employee-hero"><div><span class="schedule-hero-icon">◷</span><div><span class="overline">CURRENT WEEKLY SCHEDULE</span><h2>Your time at Dayora</h2><p>Schedule changes made by Roshan appear here and in your notifications.</p></div></div><a href="{{url_for('notifications')}}" class="btn light">View notifications</a></section>
+<section class="employee-week"><div class="week-heading"><div><span class="overline">MONDAY TO SUNDAY</span><h3>Working hours</h3></div><span>Times use your organization’s local timezone</span></div><div class="week-cards">{% for day in schedules %}<article class="workday {{'today' if day.weekday==today_weekday}} {{'day-off' if not day.is_working_day}}"><div class="day-top"><span>{{day.day_name[:3]|upper}}</span>{% if day.weekday==today_weekday %}<i>TODAY</i>{% endif %}</div><h3>{{day.day_name}}</h3>{% if day.is_working_day %}<div class="work-time"><b>{{day.start_time}}</b><span>to</span><b>{{day.end_time}}</b></div><small>Working day</small>{% else %}<div class="rest-day">Rest day</div><small>No scheduled hours</small>{% endif %}</article>{% endfor %}</div></section>
+<article class="card schedule-info"><span class="overline">HOW UPDATES WORK</span><h3>You’ll always know when your schedule changes.</h3><div><p><b>1</b> Roshan updates a working day or time in Admin Center.</p><p><b>2</b> Dayora sends an unread notification to every active employee.</p><p><b>3</b> This page immediately displays the new weekly schedule.</p></div></article>
+{% endblock %}

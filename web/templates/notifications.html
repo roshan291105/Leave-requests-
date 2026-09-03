@@ -1,0 +1,10 @@
+{% extends 'base.html' %}
+{% block title %}Notifications · Dayora{% endblock %}
+{% block heading %}Notifications{% endblock %}
+{% block content %}
+<section class="notification-tools"><div><span class="overline">LIVE UPDATES</span><h2>Stay in the loop.</h2><p>Request activity and decisions appear here automatically.</p></div><div class="notification-actions"><form method="post" action="{{url_for('read_all_notifications')}}"><button class="btn ghost">✓ Mark all read</button></form><form method="post" action="{{url_for('clear_read_notifications')}}"><button class="btn ghost" data-confirm="Clear all read notifications?">Clear read</button></form></div></section>
+<article class="card notifications"><div class="card-head"><div><span class="overline">YOUR UPDATES</span><h3>What’s new</h3></div><span class="live-indicator"><i></i> Live</span></div>
+{% for n in notifications %}<div class="notification {{'unread' if not n.is_read}}"><span class="notice-mark"></span><div class="notification-copy"><strong>{{n.message}}</strong><small>{{n.created_at}}</small></div>{% if not n.is_read %}<form method="post" action="{{url_for('read_notification',notification_id=n.id)}}"><button class="mark-read" title="Mark as read">✓</button></form>{% else %}<span class="read-label">Read</span>{% endif %}</div>
+{% else %}<div class="empty">You’re all caught up. New leave activity will appear here.</div>{% endfor %}
+</article>
+{% endblock %}

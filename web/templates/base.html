@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Dayora Leave{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
+  <link rel="stylesheet" href="{{ url_for('static',filename='css/brand.css') }}">
+</head>
+<body><div class="app-shell"><aside class="sidebar">
+  <a class="logo" href="{{url_for('dashboard')}}"><span class="brand-mark"><i></i></span><span class="brand-word">Dayora</span></a>
+  <div class="workspace">WORKSPACE</div><nav>
+    <a class="{{'active' if request.endpoint=='dashboard'}}" href="{{url_for('dashboard')}}">▦ <span>Overview</span></a>
+    {% if session.role=='ADMIN' %}<a class="{{'active' if request.endpoint=='admin_requests'}}" href="{{url_for('admin_requests')}}">✓ <span>Leave requests</span></a><a class="{{'active' if request.endpoint=='attendance'}}" href="{{url_for('attendance')}}">◷ <span>Attendance</span></a><a class="{{'active' if request.endpoint in ('employees','employee_detail','update_employee','reset_employee_password')}}" href="{{url_for('employees')}}">♙ <span>Employees</span></a><a class="admin-only-link {{'active' if request.endpoint in ('admin_center','update_work_schedule')}}" href="{{url_for('admin_center')}}">⚙ <span>Admin Center</span><em>ADMIN</em></a>{% endif %}
+    {% if session.role=='EMPLOYEE' %}<a class="{{'active' if request.endpoint=='employee_schedule'}}" href="{{url_for('employee_schedule')}}">◷ <span>My Schedule</span></a>{% endif %}
+    <a class="{{'active' if request.endpoint in ('notifications','read_notification','read_all_notifications','clear_read_notifications')}}" href="{{url_for('notifications')}}">◌ <span>Notifications</span><b id="notification-badge" class="{{'badge-hidden' if not unread_count}}">{{unread_count}}</b></a>
+  </nav><div class="sidebar-user"><div class="avatar">{{session.name[:1]}}</div><div><strong>{{session.name}}</strong><small>{{session.role|title}}</small></div><form method="post" action="{{url_for('logout')}}" class="signout-form"><button type="submit" class="signout-button" title="Sign out" aria-label="Sign out" data-confirm="Are you sure you want to sign out?"><span class="signout-icon"><i></i></span></button></form></div>
+</aside><main><header class="topbar"><div class="topbar-left"><button type="button" class="global-back" data-back-button data-fallback="{{url_for('dashboard')}}" aria-label="Go back">←</button><div><span class="eyebrow">PEOPLE & CULTURE</span><h1>{% block heading %}Overview{% endblock %}</h1></div></div><div class="today"><span></span>{{ current_year }} · Plan time well</div></header>
+{% for category,message in get_flashed_messages(with_categories=true) %}<div class="toast {{category}}">{{message}}<button>×</button></div>{% endfor %}
+{% block content %}{% endblock %}</main></div><script src="{{url_for('static',filename='js/app.js')}}"></script></body></html>
