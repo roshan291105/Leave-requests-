@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% block title %}Register employee · Dayora{% endblock %}
+{% block heading %}Register employee{% endblock %}
+{% block content %}
+<section class="directory-head"><div><span class="overline">ADMINISTRATOR ACCESS ONLY</span><h2>Welcome someone new.</h2><p>Create their employee profile and give them access to Dayora.</p></div><a class="btn ghost" href="{{url_for('employees')}}">Back to employees</a></section>
+<section class="employee-registration-layout">
+  <form method="post" action="{{url_for('register_employee')}}" class="card employee-registration-form">
+    <input type="hidden" name="csrf_token" value="{{employee_csrf_token}}">
+    {% if error %}<div class="form-alert" role="alert">{{error}} Please re-enter the password before submitting again.</div>{% endif %}
+    <fieldset><legend>Employee details</legend><div class="form-grid">
+      <label>Full name<input name="full_name" value="{{form.get('full_name', '')}}" minlength="2" maxlength="100" autocomplete="name" required></label>
+      <label>Email address<input type="email" name="email" value="{{form.get('email', '')}}" maxlength="254" autocomplete="email" required></label>
+      <label>Department<input name="department" list="employee-departments" value="{{form.get('department', '')}}" maxlength="80" required><small class="field-hint">Choose an existing team or enter a new one.</small></label>
+      <datalist id="employee-departments">{% for department in departments %}<option value="{{department}}">{% endfor %}</datalist>
+      <label>Employment type<select name="employment_type" required>{% for type in employment_types %}<option {{'selected' if form.get('employment_type', 'Permanent')==type}}>{{type}}</option>{% endfor %}</select></label>
+    </div></fieldset>
+    <fieldset><legend>Sign-in access</legend><div class="form-grid">
+      <label>Login ID<input name="username" value="{{form.get('username', '')}}" minlength="3" maxlength="30" pattern="[a-zA-Z0-9._\-]+" autocomplete="off" required><small class="field-hint">3–30 letters, numbers, dots, underscores, or hyphens. Case-sensitive at sign-in.</small></label>
+      <label>Initial password<input type="password" name="password" minlength="8" maxlength="128" autocomplete="new-password" required><small class="field-hint">8–128 characters. Share these credentials with the employee.</small></label>
+    </div></fieldset>
+    <fieldset><legend>Leave balances <small>days</small></legend><div class="balance-inputs">
+      <label>Annual<input type="number" name="annual_balance" min="0" max="365" step="1" value="{{form.get('annual_balance', '18')}}" required></label>
+      <label>Sick<input type="number" name="sick_balance" min="0" max="365" step="1" value="{{form.get('sick_balance', '10')}}" required></label>
+      <label>Casual<input type="number" name="casual_balance" min="0" max="365" step="1" value="{{form.get('casual_balance', '8')}}" required></label>
+    </div></fieldset>
+    <div class="employee-registration-actions"><a class="btn ghost" href="{{url_for('employees')}}">Cancel</a><button type="submit" class="btn primary">Register employee</button></div>
+  </form>
+  <aside class="admin-quick-links"><article class="card admin-note"><span class="overline">READY TO JOIN</span><h3>One profile. Everything connected.</h3><p>An employee ID is assigned automatically. The new account can sign in immediately to view its schedule, request leave, and receive tasks.</p><p>Only administrators can register or remove employees.</p></article><article class="card admin-note"><span class="overline">WHEN SOMEONE LEAVES</span><h3>Keep their records.</h3><p>Open an employee profile and choose Remove employee to disable access. Their history stays available under Removed / inactive in the directory.</p></article></aside>
+</section>
+{% endblock %}

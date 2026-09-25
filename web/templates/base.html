@@ -1,21 +1,48 @@
+{% from 'ui_icons.html' import icon %}
+{% set is_dashboard = request.endpoint == 'dashboard' %}
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{% block title %}Dayora Leave{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="{{ url_for('static', filename='favicon.svg') }}">
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
   <link rel="stylesheet" href="{{ url_for('static',filename='css/brand.css') }}">
+  <link rel="stylesheet" href="{{url_for('static',filename='css/portal.css')}}">
+  {% if session.role == 'ADMIN' %}<link rel="stylesheet" href="{{url_for('static',filename='css/reminders.css')}}">{% endif %}
+  {% if request.endpoint == 'my_day' %}<link rel="stylesheet" href="{{url_for('static',filename='css/my_day.css')}}"><script defer src="{{url_for('static',filename='js/my_day.js')}}"></script>{% endif %}
+  {% if request.endpoint in ('salaries', 'new_salary', 'edit_salary', 'department_salaries', 'pay_selected_salaries') %}<link rel="stylesheet" href="{{url_for('static',filename='css/salary.css')}}"><script defer src="{{url_for('static',filename='js/salary.js')}}"></script>{% endif %}
+  {% if request.endpoint in ('messages', 'message_thread') %}<link rel="stylesheet" href="{{url_for('static',filename='css/messages.css')}}"><script defer src="{{url_for('static',filename='js/messages.js')}}"></script>{% endif %}
 </head>
-<body><div class="app-shell"><aside class="sidebar">
+<body class="dayora-app {{'dashboard-page' if is_dashboard}}"><div class="app-shell"><aside class="sidebar portal-sidebar">
   <a class="logo" href="{{url_for('dashboard')}}"><span class="brand-mark"><i></i></span><span class="brand-word">Dayora</span></a>
-  <div class="workspace">WORKSPACE</div><nav>
-    <a class="{{'active' if request.endpoint=='dashboard'}}" href="{{url_for('dashboard')}}">▦ <span>Overview</span></a>
-    {% if session.role=='ADMIN' %}<a class="{{'active' if request.endpoint=='admin_requests'}}" href="{{url_for('admin_requests')}}">✓ <span>Leave requests</span></a><a class="{{'active' if request.endpoint=='attendance'}}" href="{{url_for('attendance')}}">◷ <span>Attendance</span></a><a class="{{'active' if request.endpoint in ('employees','employee_detail','update_employee','reset_employee_password')}}" href="{{url_for('employees')}}">♙ <span>Employees</span></a><a class="admin-only-link {{'active' if request.endpoint in ('admin_center','update_work_schedule')}}" href="{{url_for('admin_center')}}">⚙ <span>Admin Center</span><em>ADMIN</em></a>{% endif %}
-    {% if session.role=='EMPLOYEE' %}<a class="{{'active' if request.endpoint=='employee_schedule'}}" href="{{url_for('employee_schedule')}}">◷ <span>My Schedule</span></a>{% endif %}
-    <a class="{{'active' if request.endpoint in ('notifications','read_notification','read_all_notifications','clear_read_notifications')}}" href="{{url_for('notifications')}}">◌ <span>Notifications</span><b id="notification-badge" class="{{'badge-hidden' if not unread_count}}">{{unread_count}}</b></a>
-  </nav><div class="sidebar-user"><div class="avatar">{{session.name[:1]}}</div><div><strong>{{session.name}}</strong><small>{{session.role|title}}</small></div><form method="post" action="{{url_for('logout')}}" class="signout-form"><button type="submit" class="signout-button" title="Sign out" aria-label="Sign out" data-confirm="Are you sure you want to sign out?"><span class="signout-icon"><i></i></span></button></form></div>
-</aside><main><header class="topbar"><div class="topbar-left"><button type="button" class="global-back" data-back-button data-fallback="{{url_for('dashboard')}}" aria-label="Go back">←</button><div><span class="eyebrow">PEOPLE & CULTURE</span><h1>{% block heading %}Overview{% endblock %}</h1></div></div><div class="today"><span></span>{{ current_year }} · Plan time well</div></header>
+  <div class="workspace">YOUR SPACE</div>
+  <nav aria-label="Main navigation">
+    <a class="{{'active' if is_dashboard}}" href="{{url_for('dashboard')}}" data-home-link title="Home">{{icon('home')}} <span>Home</span></a>
+    <a href="{{url_for('dashboard')}}#workspace" data-workspace-link title="Workspace">{{icon('workspace')}} <span>Workspace</span></a>
+    {% if session.role == 'EMPLOYEE' %}<a class="{{ 'active' if request.endpoint == 'my_day' }}" href="{{url_for('my_day')}}" title="My day">{{icon('sparkle')}} <span>My day</span></a>{% endif %}
+    {% if session.role == 'ADMIN' %}
+    <a class="{{'active' if request.endpoint in ('admin_reminders','review_admin_reminder','save_reminder_settings')}}" href="{{url_for('admin_reminders')}}" title="Reminders">{{icon('bell')}} <span>Reminders</span>{% if admin_reminders.due_count %}<b>{{admin_reminders.due_count}}</b>{% endif %}</a>
+    <a class="{{'active' if request.endpoint=='admin_requests'}}" href="{{url_for('admin_requests')}}" title="Leave requests">{{icon('calendar')}} <span>Leave requests</span></a>
+    <a class="{{'active' if request.endpoint=='attendance'}}" href="{{url_for('attendance')}}" title="Attendance">{{icon('clock')}} <span>Attendance</span></a>
+    <a class="{{'active' if request.endpoint in ('employees','employee_detail','register_employee','remove_employee','update_employee','reset_employee_password')}}" href="{{url_for('employees')}}" title="Employees">{{icon('people')}} <span>Employees</span></a>
+    <a class="admin-only-link {{'active' if request.endpoint in ('admin_center','update_work_schedule')}}" href="{{url_for('admin_center')}}" title="Admin Center">{{icon('settings')}} <span>Admin Center</span><em>ADMIN</em></a>
+    {% endif %}
+    {% if session.role == 'EMPLOYEE' %}<a class="{{'active' if request.endpoint=='employee_schedule'}}" href="{{url_for('employee_schedule')}}" title="My schedule">{{icon('clock')}} <span>My schedule</span></a>{% endif %}
+    <a class="{{'active' if request.endpoint in ('salaries','new_salary','edit_salary','department_salaries','pay_selected_salaries')}}" href="{{url_for('salaries')}}" title="{{'Salary' if session.role == 'ADMIN' else 'My salary'}}">{{icon('wallet')}} <span>{{'Salary' if session.role == 'ADMIN' else 'My salary'}}</span></a>
+    <a class="{{'active' if request.endpoint in ('tasks','assign_task','update_task_status')}}" href="{{url_for('tasks')}}" title="{{'Team tasks' if session.role == 'ADMIN' else 'My tasks'}}">{{icon('tasks')}} <span>{{'Team tasks' if session.role == 'ADMIN' else 'My tasks'}}</span></a>
+    <a class="{{'active' if request.endpoint in ('notifications','read_notification','read_all_notifications','clear_read_notifications')}}" href="{{url_for('notifications')}}" title="Notifications">{{icon('bell')}} <span>Notifications</span><b id="notification-badge" class="{{'badge-hidden' if not unread_count}}">{{unread_count}}</b></a>
+    <a class="{{'active' if request.endpoint in ('messages','message_thread')}}" href="{{url_for('messages')}}" title="Messages">{{icon('message')}} <span>Messages</span></a>
+  </nav>
+  <div class="portal-sidebar-note">A little more clarity.<br>A little less busywork.<span>THE DAYORA WAY {{icon('sparkle')}}</span></div>
+  <div class="sidebar-user"><div class="avatar">{{session.name[:1]}}</div><div><strong>{{session.name}}</strong><small>{{session.role|title}}</small></div><form method="post" action="{{url_for('logout')}}" class="signout-form"><button type="submit" class="signout-button" title="Sign out" aria-label="Sign out" data-confirm="Are you sure you want to sign out?"><span class="signout-icon"><i></i></span></button></form></div>
+</aside><main>
+<header class="topbar"><div class="topbar-left"><button type="button" class="global-back" data-back-button data-fallback="{{url_for('dashboard')}}" aria-label="Go back" {% if is_dashboard %}disabled title="You are on the home page"{% else %}title="Go back"{% endif %}>&larr;</button><div><span class="eyebrow">PEOPLE & CULTURE</span><h1>{% if is_dashboard %}<span data-home-heading>Home</span>{% endif %}<span {% if is_dashboard %}data-workspace-heading hidden{% endif %}>{% block heading %}Overview{% endblock %}</span></h1></div></div>
+<div class="portal-header-tools"><a class="portal-mobile-home" href="{{url_for('dashboard')}}" aria-label="Home">{{icon('home')}}</a><a class="portal-mobile-workspace" href="{{url_for('dashboard')}}#workspace" data-workspace-link>Workspace {{icon('arrow')}}</a><span class="portal-role-badge">{{'Administrator' if session.role == 'ADMIN' else 'Employee'}}</span><a class="portal-notification-link" href="{{url_for('notifications')}}" aria-label="Notifications">{{icon('bell')}}{% if unread_count %}<i></i>{% endif %}</a><div class="today"><span></span>{{current_year}} &middot; Plan time well</div></div></header>
 {% for category,message in get_flashed_messages(with_categories=true) %}<div class="toast {{category}}">{{message}}<button>×</button></div>{% endfor %}
-{% block content %}{% endblock %}</main></div><script src="{{url_for('static',filename='js/app.js')}}"></script></body></html>
+{% if is_dashboard %}<section id="workspace" data-workspace-view aria-label="Workspace"><a class="dashboard-task-link" href="{{url_for('tasks')}}"><span>{{'Assign and manage team tasks' if session.role == 'ADMIN' else 'View my assigned tasks'}}</span><span aria-hidden="true">&rarr;</span></a>{% endif %}
+{% block content %}{% endblock %}
+{% if is_dashboard %}</section><div data-home-view>{% include 'home.html' %}</div>{% endif %}
+</main></div><script src="{{url_for('static',filename='js/app.js')}}"></script><script src="{{url_for('static',filename='js/portal.js')}}"></script></body></html>

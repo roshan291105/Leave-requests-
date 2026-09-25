@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% block title %}Tasks · Dayora{% endblock %}
+{% block heading %}{{ 'Team tasks' if session.role == 'ADMIN' else 'My tasks' }}{% endblock %}
+{% block content %}
+<section class="task-intro">
+  <div><span class="overline">TEAMWORK</span><h2>{{ 'Give your team a clear next step.' if session.role == 'ADMIN' else 'Your next steps, in one place.' }}</h2>
+  <p class="muted">{{ 'Assign work to an employee and follow their progress here.' if session.role == 'ADMIN' else 'Read your administrator’s instructions and keep your progress up to date.' }}</p></div>
+  <a class="btn ghost" href="{{ url_for('tasks') }}">Refresh tasks</a>
+</section>
+{% if error %}<p class="form-alert" role="alert">{{ error }}</p>{% endif %}
+{% if session.role == 'ADMIN' %}
+<section class="card task-automation" aria-label="Team task automation">
+  <div><span class="overline">TEAM TASK AUTOMATION</span><h3>Shuffle work across the team</h3>
+    <p>Distribute all {{ pending_count }} pending tasks across {{ employees|length }} active employees in random rounds, longest tasks first. Each employee gets one turn per round. In-progress and completed tasks stay with their owners.</p>
+    <p class="muted">Shuffling runs when you click below. Due dates stay the same; estimated hours describe effort, not an automatic timer. A task may stay with its current owner.</p>
+  </div>
+  <form method="post" action="{{ url_for('shuffle_tasks') }}">
+    <input type="hidden" name="csrf_token" value="{{ task_csrf_token }}">
+    <button class="btn primary" type="submit" {{ 'disabled' if not employees or not pending_count }} data-confirm="Shuffle all pending team tasks across active employees? Employees whose assignments change will be notified.">Shuffle pending tasks</button>
+  </form>
+  {% if employees %}<details><summary>View assigned hours for all employees</summary><div class="task-workloads">
+    {% for employee in employees %}<span><strong>{{ employee.full_name }}</strong> · {{ '%g'|format(employee.workload_minutes / 60) }} h open</span>{% endfor %}
+  </div></details>{% endif %}
+</section>
+{% endif %}
+<div class="task-layout {{ 'with-assignment' if session.role == 'ADMIN' }}">
+{% if session.role == 'ADMIN' %}
+  <article class="card task-assignment">
+    <div class="card-head"><div><span class="overline">NEW TASK</span><h3>Assign a task</h3></div></div>
+    {% if employees %}
+    <form method="post" action="{{ url_for('assign_task') }}">
+      <input type="hidden" name="csrf_token" value="{{ task_csrf_token }}">
+      <label>Employee<select name="employee_id" required>
+        <option value="">Choose an employee</option>
+        <option value="AUTO" {{ 'selected' if form.get('employee_id') == 'AUTO' }}>Automatic — random employee</option>
+        {% for employee in employees %}<option value="{{ employee.id }}" {{ 'selected' if form.get('employee_id') == employee.id|string }}>{{ employee.full_name }}{% if employee.employee_code %} · {{ employee.employee_code }}{% endif %}</option>{% endfor %}
+      </select></label>
+      {% set selected_title = form.get('title_template', '') %}
+      <label>Task title<select name="title_template" data-task-title-select>
+        <option value="">Custom title</option>
+        {% for suggestion in title_suggestions %}<option value="{{ suggestion }}" {{ 'selected' if selected_title == suggestion }}>{{ suggestion }}</option>{% endfor %}
+      </select></label>
+      <label class="task-custom-title" data-task-custom-title {{ 'hidden' if selected_title in title_suggestions }}>Custom task title<input name="title" value="{{ form.get('title', '') }}" maxlength="120" placeholder="Enter a title for this task"></label>
+      <label>Instructions<textarea name="instructions" rows="6" maxlength="2000" placeholder="Describe what needs to be done and the expected result." required>{{ form.get('instructions', '') }}</textarea></label>
+      <label>Due date (optional)<input type="date" name="due_date" min="{{ today }}" value="{{ form.get('due_date', '') }}"></label>
+      <label>Estimated duration (hours)<input type="number" name="duration_hours" min="0.25" max="1000" step="0.25" value="{{ form.get('duration_hours', '1') }}" required></label>
+      <p class="muted">Choose Automatic to pick a random active employee. Use Shuffle pending tasks to distribute existing work in random rounds.</p>
+      <button class="btn primary" type="submit">Assign task</button>
+      <p class="muted">The employee will receive a notification.</p>
+    </form>
+    {% else %}<p class="empty">No active employees are available for assignment.</p>{% endif %}
+  </article>
+{% endif %}
+  <section class="task-list" aria-label="Assigned tasks">
+    {% for task in tasks %}
+    <article class="card task-card" id="task-{{ task.id }}">
+      <div class="task-card-heading"><h3>{{ task.title }}</h3><span class="status task-{{ task.status|lower }}">{{ statuses[task.status] }}</span></div>
+      <p class="task-meta">{% if session.role == 'ADMIN' %}Assigned to <strong>{{ task.employee_name }}</strong>{% if task.employee_code %} · {{ task.employee_code }}{% endif %} · {% endif %}From {{ task.admin_name }}</p>
+      <p class="task-instructions">{{ task.instructions }}</p>
+      <p class="task-meta">Estimated duration: {{ '%g'|format(task.duration_minutes / 60) }} hours</p>
+      <div class="task-meta">{% if task.due_date %}Due {{ task.due_date }}{% if task.due_date < today and task.status != 'COMPLETED' %} <span class="task-overdue">Overdue</span>{% endif %}{% else %}No due date{% endif %} · Assigned {{ task.created_at[:10] }}</div>
+      {% if session.role == 'EMPLOYEE' %}
+      <form class="task-progress" method="post" action="{{ url_for('update_task_status', task_id=task.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ task_csrf_token }}">
+        <label>Progress<select name="status">{% for value, label in statuses.items() %}<option value="{{ value }}" {{ 'selected' if task.status == value }}>{{ label }}</option>{% endfor %}</select></label>
+        <button class="btn primary" type="submit">Update progress</button>
+      </form>
+      {% endif %}
+    </article>
+    {% else %}<article class="card empty"><h3>No tasks yet</h3><p>{{ 'Choose an employee and assign the first task.' if session.role == 'ADMIN' else 'Tasks assigned by your administrator will appear here.' }}</p></article>{% endfor %}
+  </section>
+</div>
+{% endblock %}

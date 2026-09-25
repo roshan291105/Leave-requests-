@@ -1,0 +1,15 @@
+web/.env
+web/.venv/
+web/backups/
+web/__pycache__/
+web/*.log
+web/.postgres-test/
+web/pgadmin-server.json
+*.pgpass
+
+target/
+**/__pycache__/
+*.pyc
+web/*.db
+web/*.db-*
+web/app_backup.py

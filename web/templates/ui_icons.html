@@ -1,0 +1,20 @@
+{% macro icon(name, class_name='') -%}
+<svg class="ui-icon {{class_name}}" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{% if name == 'home' %}<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-8H9v8H4a1 1 0 0 1-1-1z"/>
+{% elif name == 'message' %}<path d="M21 11a8 8 0 0 1-8 8H8l-5 3V7a4 4 0 0 1 4-4h6a8 8 0 0 1 8 8Z"/><path d="M7 9h10M7 13h6"/>
+{% elif name == 'workspace' %}<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>
+{% elif name == 'calendar' %}<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 11h18m-14 4h2m6 0h2m-10 3h2"/>
+{% elif name == 'clock' %}<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>
+{% elif name == 'tasks' %}<rect x="5" y="4" width="15" height="17" rx="2"/><path d="M9 4V2h7v2M9 10l1 1 2-2m2 1h3m-8 6 1 1 2-2m2 1h3"/>
+{% elif name == 'people' %}<circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3m1-16a3 3 0 0 1 0 6m2 3a5 5 0 0 1 3 4v3"/>
+{% elif name == 'bell' %}<path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-9 12h6"/>
+{% elif name == 'settings' %}<path d="m9 3 1 3h4l1-3 3 2-1 3 2 3 3 1-1 4-3 1-2 3v2H8v-2l-2-3-3-1-1-4 3-1 2-3-1-3z"/><circle cx="12" cy="13" r="3"/>
+{% elif name == 'wallet' %}<path d="M20 8V5a2 2 0 0 0-2-2H6a3 3 0 0 0 0 6h15v12H6a3 3 0 0 1-3-3V6"/><path d="M21 12h-6v5h6m-3-2.5h.01"/>
+{% elif name == 'arrow' %}<path d="M5 12h14m-6-6 6 6-6 6"/>
+{% elif name == 'arrow-up' %}<path d="M6 18 18 6M6 6h12v12"/>
+{% elif name == 'sparkle' %}<path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z"/>
+{% elif name == 'check' %}<path d="m5 12 4 4L19 6"/>
+{% elif name == 'logout' %}<path d="M9 4H4v16h5m5-12 4 4-4 4m-6-4h12"/>
+{% endif %}
+</svg>
+{%- endmacro %}

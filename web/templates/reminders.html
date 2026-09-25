@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Admin reminders &middot; Dayora{% endblock %}
+{% block heading %}Reminders{% endblock %}
+{% block content %}
+<div class="admin-reminders-page">
+  <section class="reminders-hero"><div><span class="overline">A LITTLE FOLLOW-UP GOES A LONG WAY</span><h2>Keep the essentials in sight.</h2><p>Daily attendance and task reminders, with a monthly nudge for employee salaries.</p></div><span class="reminders-hero-icon">{{icon('bell')}}</span></section>
+  <div class="reminder-section-heading"><div><h2>Your admin checklist</h2><p>{{admin_reminders.today.strftime('%A, %d %B %Y')}} &middot; {{admin_reminders.due_count}} reminder{{'s' if admin_reminders.due_count != 1}} need attention</p></div><a class="btn ghost" href="{{url_for('admin_reminders')}}">Refresh reminders</a></div>
+  {% if error %}<p class="form-alert" role="alert">{{error}}</p>{% endif %}
+  {% include 'reminder_cards.html' %}
+  <div class="reminder-bottom-grid">
+    <section class="card reminder-settings"><span class="overline">MONTHLY SALARY REMINDER</span><h3>Choose the day that works for you.</h3><p>Remind me to review the current month's employee salary payments on this day each month.</p><form method="post" action="{{url_for('save_reminder_settings')}}"><input type="hidden" name="csrf_token" value="{{reminder_csrf_token}}"><label for="salary-reminder-day">Day of the month<input id="salary-reminder-day" type="number" name="salary_day" min="1" max="31" value="{{admin_reminders.salary_day}}" required></label><button class="btn primary" type="submit">Save reminder day</button></form><p class="reminder-help">Defaults to day 1. If the month has fewer days, the reminder falls on its last day. An unfinished reminder stays due for the rest of that month.</p></section>
+    <aside class="card reminder-guidance"><span class="overline">MADE FOR YOUR ROUTINE</span><h3>A fresh checklist, every period.</h3><p>Attendance and task reviews reset each day. Salary reviews reset each month. Counts update whenever you open or refresh this page.</p><p>Attendance skips inactive employees and approved leave. Task reminders help you review existing work before giving new assignments.</p><p><strong>Mark as reviewed</strong> saves a personal checklist note for your admin account. Use the linked pages to record attendance, assign tasks and update salary payments.</p></aside>
+  </div>
+</div>
+{% endblock %}

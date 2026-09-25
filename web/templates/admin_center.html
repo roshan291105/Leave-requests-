@@ -4,5 +4,32 @@
 {% block content %}
 <section class="admin-center-hero"><div><span class="admin-shield">A</span><div><span class="overline">ADMINISTRATOR ACCESS ONLY</span><h2>Organization controls</h2><p>Manage the team schedule and monitor important operational totals.</p></div></div><span class="secure-access">● Secure admin area</span></section>
 <section class="admin-center-stats"><article><span>Active employees</span><b>{{stats.active_employees}}</b><small>{{stats.inactive_employees}} inactive</small></article><article><span>Pending leave</span><b class="orange">{{stats.pending_requests}}</b><small>needs a decision</small></article><article><span>Attendance today</span><b class="green">{{stats.attendance_marked}}</b><small>employees marked</small></article><article><span>On leave today</span><b class="purple-number">{{stats.on_leave}}</b><small>approved leave</small></article></section>
-<section class="admin-center-layout"><article class="card schedule-editor"><div class="card-head"><div><span class="overline">WORK SCHEDULE</span><h3>Day and time controls</h3><p>Changes affect automatic late-arrival analysis.</p></div></div><form method="post" action="{{url_for('update_work_schedule')}}"><div class="schedule-table"><div class="schedule-row schedule-header"><span>DAY</span><span>WORKING DAY</span><span>START</span><span>END</span></div>{% for day in schedules %}<div class="schedule-row"><strong>{{day.day_name}}</strong><label class="switch"><input type="checkbox" name="working_{{day.weekday}}" value="1" {{'checked' if day.is_working_day}}><i></i><span>{{'Working' if day.is_working_day else 'Day off'}}</span></label><input type="time" name="start_{{day.weekday}}" value="{{day.start_time or ''}}"><input type="time" name="end_{{day.weekday}}" value="{{day.end_time or ''}}"></div>{% endfor %}</div><div class="schedule-save"><span>Attendance status uses each day’s scheduled start time.</span><button class="btn primary">Save work schedule</button></div></form></article><aside class="admin-quick-links"><article class="card"><span class="overline">QUICK ACCESS</span><h3>Administration</h3><a href="{{url_for('admin_requests')}}"><span>✓</span><div><b>Leave approvals</b><small>{{stats.pending_requests}} pending requests</small></div><i>→</i></a><a href="{{url_for('attendance')}}"><span>◷</span><div><b>Mark attendance</b><small>{{stats.attendance_marked}} marked today</small></div><i>→</i></a><a href="{{url_for('employees')}}"><span>♙</span><div><b>Employee records</b><small>{{stats.active_employees}} active profiles</small></div><i>→</i></a></article><article class="card admin-note"><span class="overline">ACCESS POLICY</span><h3>Protected controls</h3><p>Only administrator accounts can access this page, update work schedules, manage employees, or make attendance and leave decisions.</p></article></aside></section>
+<section class="admin-center-layout">
+  <article class="card schedule-editor">
+    <div class="card-head"><div><span class="overline">WORK SCHEDULE</span><h3>Day and time controls</h3><p>Changes affect automatic late-arrival analysis.</p></div></div>
+    <form method="post" action="{{url_for('update_work_schedule')}}">
+      <div class="schedule-table">
+        <div class="schedule-row schedule-header"><span>DAY</span><span>WORKING DAY</span><span>START</span><span>END</span></div>
+        {% for day in schedules %}
+        {% set defaults = schedule_defaults[day.weekday] %}
+        <div class="schedule-row" data-default-working="{{defaults.is_working_day}}" data-default-start="{{defaults.start_time or ''}}" data-default-end="{{defaults.end_time or ''}}">
+          <strong>{{day.day_name}}</strong>
+          <label class="switch"><input type="checkbox" name="working_{{day.weekday}}" value="1" aria-label="{{day.day_name}} working day" {{'checked' if day.is_working_day}}><i></i><span>{{'Working' if day.is_working_day else 'Day off'}}</span></label>
+          <input type="time" name="start_{{day.weekday}}" value="{{day.start_time or ''}}" aria-label="{{day.day_name}} start time">
+          <input type="time" name="end_{{day.weekday}}" value="{{day.end_time or ''}}" aria-label="{{day.day_name}} end time">
+        </div>
+        {% endfor %}
+      </div>
+      <p class="schedule-default-help" id="schedule-default-help">Defaults: Monday–Friday 09:00–18:00, Saturday 09:00–13:00, Sunday off. Save to apply changes.</p>
+      <div class="schedule-save">
+        <span data-schedule-status role="status" aria-live="polite">Attendance status uses each day’s scheduled start time.</span>
+        <div class="schedule-actions">
+          <button type="button" class="btn ghost" data-schedule-defaults aria-describedby="schedule-default-help">Reset to defaults</button>
+          <button type="submit" class="btn primary">Save work schedule</button>
+        </div>
+      </div>
+    </form>
+  </article>
+  <aside class="admin-quick-links"><article class="card"><span class="overline">QUICK ACCESS</span><h3>Administration</h3><a href="{{url_for('department_salaries')}}"><span>{{icon('wallet')}}</span><div><b>Department salaries</b><small>Set monthly pay for each team</small></div><i>&rarr;</i></a><a href="{{url_for('salaries')}}"><span>{{icon('wallet')}}</span><div><b>Salary</b><small>Manage employee pay and payment status</small></div><i>&rarr;</i></a><a href="{{url_for('register_employee')}}"><span>+</span><div><b>Register employee</b><small>Create a profile and sign-in access</small></div><i>&rarr;</i></a><a href="{{url_for('admin_requests')}}"><span>✓</span><div><b>Leave approvals</b><small>{{stats.pending_requests}} pending requests</small></div><i>→</i></a><a href="{{url_for('attendance')}}"><span>◷</span><div><b>Mark attendance</b><small>{{stats.attendance_marked}} marked today</small></div><i>→</i></a><a href="{{url_for('employees')}}"><span>♙</span><div><b>Employee records</b><small>{{stats.active_employees}} active profiles</small></div><i>→</i></a></article><article class="card admin-note"><span class="overline">ACCESS POLICY</span><h3>Protected controls</h3><p>Only administrator accounts can access this page, update work schedules, manage employees, or make attendance and leave decisions.</p></article></aside>
+</section>
 {% endblock %}

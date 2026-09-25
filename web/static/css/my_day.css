@@ -1,0 +1,52 @@
+.my-day { max-width:1320px; margin:auto; }
+.day-welcome { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:24px 0 30px; }
+.day-welcome h2 { font-size:clamp(25px,3vw,36px); letter-spacing:-1px; margin:12px 0; }
+.day-welcome p,.my-day .muted { color:#656578; line-height:1.6; }
+.day-date { background:#ede9fb; color:#59458c; padding:12px 18px; border-radius:24px; white-space:nowrap; }
+.day-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin-bottom:24px; }
+.day-stats article { padding:22px; border:1px solid #e8e5f0; background:#fff; border-radius:20px; }
+.day-stats span { display:block; color:#656578; font-size:13px; margin-bottom:12px; }
+.day-stats strong { font-size:32px; color:#40355f; }
+.day-stats small { font-size:17px; color:#767080; }
+.day-stats .day-attention { background:#fff2e8; border-color:#f3d6c2; }
+.day-grid { display:grid; grid-template-columns:minmax(0,1.35fr) minmax(0,1fr); gap:24px; align-items:start; }
+.day-grid .card { padding:26px; min-width:0; }
+.day-grid h3 { font-size:21px; margin:8px 0 14px; }
+.day-grid .card-head { flex-wrap:wrap; gap:12px; }
+.day-grid a { color:#64519b; }
+.day-task { display:flex; gap:15px; align-items:start; padding:20px 0; border-bottom:1px solid #eeeaf3; text-decoration:none; }
+.day-task:last-child { border-bottom:0; }
+.day-task>div { flex:1; min-width:0; }
+.day-task strong { color:#322d43; line-height:1.5; overflow-wrap:anywhere; }
+.day-task p { color:#6f697d; font-size:13px; margin:6px 0 12px; }
+.day-task-number { background:#f0ebfa; border-radius:10px; padding:9px 13px; font-weight:700; }
+.day-due { font-size:12px; background:#f1eff7; color:#5f526d; padding:5px 9px; border-radius:8px; display:inline-block; }
+.day-overdue { color:#944321; background:#fff0e6; }
+.day-empty { padding:26px 12px; text-align:center; color:#6c6579; line-height:1.6; }
+.day-empty .ui-icon { width:32px; height:32px; color:#8b76b5; }
+.day-grid .day-focus { background:linear-gradient(135deg,#eee9ff,#f7f4ff); border-color:#e0d7f4; text-align:center; }
+.day-focus p { color:#65567d; line-height:1.6; }
+.day-focus label { display:block; margin:20px 0 8px; font-size:13px; }
+.day-focus select { width:100%; max-width:260px; background:#fff; }
+.focus-clock { font-size:clamp(48px,6vw,70px); font-variant-numeric:tabular-nums; font-weight:700; color:#504071; margin:20px 0; letter-spacing:1px; }
+.focus-actions { display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+.day-focus small { display:block; color:#6c5d81; line-height:1.6; }
+.focus-message { min-height:26px; }
+.checklist-add { display:flex; gap:10px; align-items:end; margin:20px 0; }
+.checklist-add label { flex:1; min-width:0; font-size:13px; }
+.checklist-add input { width:100%; margin-top:8px; }
+.checklist-items { padding:0; margin:0; list-style:none; }
+.checklist-items form { display:flex; align-items:center; gap:12px; padding:15px 0; border-top:1px solid #eeeaf3; }
+.checklist-items form>span { flex:1; overflow-wrap:anywhere; min-width:0; line-height:1.5; }
+.checklist-check { border:1px solid #c7bbdf; background:#f2edfc; color:#614991; border-radius:50%; width:36px; height:36px; flex-shrink:0; cursor:pointer; font-size:21px; }
+.is-complete form>span { text-decoration:line-through; color:#77717f; }
+.checklist-delete { background:transparent; border:0; cursor:pointer; color:#766b82; padding:10px 0; }
+.day-schedule-time { font-size:27px; font-weight:700; color:#42655f; margin-top:24px; }
+.day-schedule>p { line-height:1.7; }
+.day-leave { background:#edf5f1; padding:16px; border-radius:14px; margin:20px 0; color:#42655f; }
+.day-leave p { margin-bottom:0; line-height:1.6; }
+.day-quick-links { margin-top:22px; display:grid; gap:12px; }
+.day-quick-links a { display:flex; justify-content:space-between; gap:12px; padding:12px 0; text-decoration:none; border-top:1px solid #eeeaf3; }
+.my-day :focus-visible { outline:3px solid #886cc3; outline-offset:4px; }
+@media(max-width:1000px) { .day-grid { grid-template-columns:1fr; } .day-stats { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:540px) { .day-welcome { align-items:start; flex-direction:column; } .day-grid .card { padding:20px; } .day-stats article { padding:16px; } .checklist-add { align-items:stretch; flex-direction:column; } }

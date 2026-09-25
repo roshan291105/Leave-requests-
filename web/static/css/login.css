@@ -1,0 +1,103 @@
+/* Standalone sign-in experience; dashboard styles remain independent. */
+:root { color-scheme:light; --signin-ink:#242139; --signin-muted:#7c778c; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:'DM Sans',sans-serif; }
+button,input { font:inherit; }
+button { cursor:pointer; }
+a { color:inherit; }
+.signin-page { min-height:100vh; background:#111222; color:var(--signin-ink); padding:26px; display:grid; place-items:center; }
+.signin-shell { display:grid; grid-template-columns:1.06fr 1fr; width:min(1390px,100%); min-height:min(850px,calc(100svh - 52px)); border:1px solid #343248; border-radius:26px; overflow:hidden; box-shadow:0 35px 90px #00000025; }
+.signin-story { position:relative; isolation:isolate; overflow:hidden; display:flex; flex-direction:column; padding:40px 52px 30px; background:radial-gradient(ellipse at 25% 85%,#503b724f,transparent 60%),linear-gradient(145deg,#202037,#17182b); color:#fff; }
+.signin-story::before { content:''; position:absolute; z-index:-1; inset:0; background-image:radial-gradient(#aa9abd40 .7px,transparent .7px); background-size:21px 21px; mask-image:linear-gradient(180deg,transparent 15%,#000); opacity:.4; }
+.signin-brand { display:inline-flex; align-items:center; gap:11px; width:fit-content; color:#fff; font-family:Manrope,sans-serif; font-size:25px; font-weight:800; letter-spacing:-1px; text-decoration:none; }
+.signin-edition { margin-left:auto; color:#9c94b0; font-family:'DM Sans',sans-serif; font-size:8px; font-weight:500; letter-spacing:1.8px; }
+.signin-story-top { display:flex; align-items:center; gap:20px; }
+.signin-story-copy { position:relative; z-index:1; margin-top:62px; }
+.signin-kicker { display:flex; align-items:center; gap:8px; font-size:9px; letter-spacing:2px; font-weight:600; color:#b8a3db; }
+.signin-kicker>span { width:6px; height:6px; background:#c1a7ef; border-radius:50%; box-shadow:0 0 12px #c1a7ef55; }
+.signin-story h1 { font-family:Manrope,sans-serif; font-size:clamp(42px,4.25vw,63px); font-weight:700; line-height:1.12; letter-spacing:-2.8px; margin:20px 0 20px; }
+.signin-story h1 em { font-style:normal; color:#c8a7fa; background:linear-gradient(95deg,#dbb9f9,#a492f2); background-clip:text; -webkit-text-fill-color:transparent; }
+.signin-story-copy>p { max-width:340px; color:#b0aabd; font-size:13px; line-height:1.9; margin:0; }
+.signin-visual { position:relative; height:270px; width:100%; max-width:470px; margin:29px auto 15px; }
+.signin-orbit { position:absolute; width:440px; height:250px; border:1px solid #b292db22; border-radius:50%; top:2px; left:-5px; transform:rotate(-16deg); }
+.signin-orbit.second { width:370px; height:320px; top:-30px; left:35px; transform:rotate(25deg); opacity:.7; }
+.signin-glow { position:absolute; width:320px; height:230px; border-radius:50%; background:#9b6cdc33; filter:blur(40px); top:35px; left:60px; }
+.signin-preview { position:absolute; left:25px; top:28px; width:310px; padding:22px; border:1px solid #e4d8f23b; border-radius:18px; background:linear-gradient(120deg,#4c3e63eb,#342e4ae8); box-shadow:0 20px 45px #09071e33; transform:rotate(-5deg); animation:signin-float 8s ease-in-out infinite; }
+.signin-preview-head { display:flex; align-items:center; gap:9px; font-size:11px; color:#ece3f9; }
+.signin-preview-head>span { display:grid; place-items:center; width:25px; height:25px; background:#9b7cb149; border-radius:8px; }
+.signin-preview-head .ui-icon { width:15px; height:15px; }
+.signin-preview-head>i { width:5px; height:5px; margin-left:auto; border-radius:50%; background:#b0a0c6; box-shadow:-8px 0 #b0a0c6; }
+.signin-preview-line { height:1px; background:#c1acc329; margin:17px 0; }
+.signin-week,.signin-week-blocks { display:grid; grid-template-columns:repeat(5,1fr); gap:9px; text-align:center; }
+.signin-week { font-size:8px; color:#c1b5d0; }
+.signin-week-blocks { margin-top:10px; }
+.signin-week-blocks span { height:37px; border:1px solid #dbc5ed12; border-radius:8px; background:#ad98c02b; }
+.signin-week-blocks span:nth-child(2) { background:#c5a1ed; box-shadow:0 3px 15px #d9b5fa1c; }
+.signin-week-blocks span:nth-child(3) { background:#a388c1; }
+.signin-preview-footer { margin-top:17px; display:flex; align-items:center; gap:6px; color:#cdbddf; font-size:9px; }
+.signin-preview-footer .ui-icon { width:13px; height:13px; }
+.signin-floating-note { position:absolute; right:0; bottom:20px; display:flex; align-items:center; gap:12px; padding:17px 22px; border:1px solid #e9ddf5; border-radius:14px; background:#f2ecfb; color:#554167; box-shadow:0 12px 35px #09071e40; transform:rotate(5deg); }
+.signin-floating-note>span { display:grid; place-items:center; width:34px; height:34px; border-radius:11px; background:#e0d4f0; color:#8d62b7; }
+.signin-floating-note strong { font-size:12px; }
+.signin-floating-note p { font-size:9px; margin:5px 0 0; color:#917aa4; }
+.signin-star { position:absolute; right:18px; top:15px; color:#cdb0f0; }
+.signin-star .ui-icon { width:29px; height:29px; }
+.signin-story-bottom { margin-top:auto; display:flex; justify-content:space-between; align-items:center; gap:10px; padding-top:20px; border-top:1px solid #ffffff14; color:#9b90ad; font-size:9px; }
+.signin-feature-list { display:flex; align-items:center; gap:14px; }
+.signin-feature-list span { display:flex; align-items:center; gap:5px; }
+.signin-feature-list .ui-icon { width:13px; height:13px; }
+.signin-story-bottom>span { color:#766c89; font-size:8px; }
+
+.signin-panel { display:flex; flex-direction:column; padding:35px 53px 27px; background:radial-gradient(ellipse at 100% 0,#eee5fc,transparent 42%),#faf9fc; }
+.signin-panel-top { display:flex; justify-content:flex-end; align-items:center; gap:7px; color:#90869f; font-size:9px; letter-spacing:1.1px; }
+.signin-panel-top .ui-icon { width:14px; height:14px; color:#ac91c9; }
+.signin-mobile-brand { display:none; }
+.signin-form-wrap { width:min(390px,100%); margin:auto; padding:40px 0; }
+.signin-welcome-icon { display:grid; place-items:center; width:51px; height:51px; border:1px solid #e4d8f1; background:linear-gradient(140deg,#f6efff,#e9def7); border-radius:17px; color:#9573bd; margin-bottom:26px; box-shadow:0 6px 20px #b19ac017; }
+.signin-welcome-icon .ui-icon { width:24px; height:24px; }
+.signin-overline { color:#997caf; font-size:9px; font-weight:600; letter-spacing:2px; margin:0 0 10px; }
+.signin-form-wrap h2 { font-family:Manrope,sans-serif; font-size:35px; font-weight:800; letter-spacing:-1.5px; margin:0 0 12px; }
+.signin-subtitle { font-size:12px; color:#888092; line-height:1.8; margin:0 0 29px; }
+.signin-form label { display:block; font-size:11px; font-weight:600; color:#5a4c69; margin:0 0 9px; }
+.signin-field { position:relative; margin-bottom:21px; }
+.signin-field>svg { position:absolute; left:15px; top:17px; width:18px; height:18px; color:#a28daf; pointer-events:none; }
+.signin-field input { width:100%; height:52px; border:1px solid #e3dce9; border-radius:11px; background:#fff; color:#32273e; font-size:12px; padding:0 15px 0 43px; transition:border-color .2s,box-shadow .2s; }
+.signin-field input::placeholder { color:#a59aaa; }
+.signin-field input:focus { outline:none; border-color:#a084c2; box-shadow:0 0 0 4px #ad8acd14; }
+.signin-field input[type=password],.signin-field input[name=password] { padding-right:66px; }
+.signin-password-toggle { position:absolute; right:7px; top:9px; padding:9px 10px; border:0; border-radius:7px; background:transparent; font-size:10px; font-weight:600; color:#8b69a6; }
+.signin-password-toggle:hover { background:#f4eef9; }
+.signin-submit { display:flex; align-items:center; justify-content:space-between; width:100%; border:1px solid #7856a4; border-radius:11px; padding:16px 18px; background:linear-gradient(110deg,#7954ae,#61448f); color:white; font-size:12px; font-weight:600; box-shadow:0 8px 20px #7854ad26; transition:transform .2s,box-shadow .2s; }
+.signin-submit:hover { transform:translateY(-2px); box-shadow:0 10px 23px #7854ad40; }
+.signin-submit .ui-icon { width:16px; height:16px; }
+.signin-submit:disabled { opacity:.7; cursor:wait; transform:none; }
+.signin-account-note { display:flex; gap:7px; justify-content:center; align-items:center; margin:16px 0 0; font-size:10px; color:#96899f; line-height:1.6; }
+.signin-account-note .ui-icon { width:13px; height:13px; flex-shrink:0; }
+.signin-demo { border-top:1px solid #e9e2ee; margin-top:28px; padding-top:20px; }
+.signin-demo summary { cursor:pointer; display:flex; align-items:center; gap:8px; color:#877493; font-size:10px; list-style:none; }
+.signin-demo summary::-webkit-details-marker { display:none; }
+.signin-demo summary::after { content:'+'; margin-left:auto; font-size:16px; color:#a18ab4; }
+.signin-demo[open] summary::after { content:'\2212'; }
+.signin-demo-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
+.signin-demo-choice { padding:12px; border:1px solid #e4dbed; border-radius:11px; text-align:left; background:#f4eff9; color:#6e5384; }
+.signin-demo-choice strong { display:block; font-size:11px; margin-bottom:5px; }
+.signin-demo-choice span { display:block; font-size:10px; color:#897393; }
+.signin-demo-choice:hover { background:#ece3f5; border-color:#c9b6dc; }
+.signin-demo p { font-size:9px; line-height:1.7; margin:10px 0 0; color:#94869c; }
+.signin-status { font-size:10px; color:#7b5f90; margin:8px 0 0; line-height:1.6; }
+.signin-status:empty { display:none; }
+.signin-alert { padding:12px 14px; border:1px solid #e9cbd7; border-radius:10px; background:#fff0f4; color:#a23e61; font-size:12px; line-height:1.6; margin:0 0 20px; }
+.signin-alert.success { color:#3e775f; background:#edf7f1; border-color:#cce2d4; }
+.signin-panel-bottom { text-align:center; color:#ada2b7; font-size:9px; }
+.signin-panel-bottom span { padding:0 9px; color:#cabdd6; }
+.signin-page button:focus-visible,.signin-page summary:focus-visible,.signin-page a:focus-visible { outline:3px solid #aa87cf; outline-offset:4px; }
+.signin-enter { animation:signin-enter .65s ease both; }
+.signin-form-wrap { animation-delay:.12s; }
+@keyframes signin-enter { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+@keyframes signin-float { 0%,100% { transform:rotate(-5deg) translateY(0); } 50% { transform:rotate(-3deg) translateY(-7px); } }
+@media(min-width:1600px) { .signin-shell { min-height:880px; } .signin-story-copy { margin-top:75px; } }
+@media(max-width:1150px) { .signin-story { padding:34px; } .signin-panel { padding:35px; } .signin-edition { display:none; } .signin-story h1 { font-size:49px; } .signin-floating-note { right:-8px; } .signin-preview { left:0; width:280px; } .signin-story-bottom>span { display:none; } }
+@media(max-width:900px) { .signin-page { padding:18px; } .signin-shell { grid-template-columns:.9fr 1fr; min-height:calc(100svh - 36px); } .signin-story { padding:30px 25px; } .signin-panel { padding:30px; } .signin-story-copy { margin-top:60px; } .signin-story h1 { font-size:43px; letter-spacing:-2px; } .signin-preview { width:240px; padding:17px; } .signin-floating-note { padding:12px; bottom:35px; } .signin-visual { height:250px; } .signin-feature-list { gap:10px; font-size:8px; } .signin-form-wrap h2 { font-size:31px; } }
+@media(max-width:700px) { .signin-page { padding:12px; align-items:start; } .signin-shell { grid-template-columns:1fr; min-height:calc(100svh - 24px); border-radius:20px; } .signin-story { display:none; } .signin-panel { padding:25px 28px; min-height:calc(100svh - 26px); } .signin-panel-top { justify-content:space-between; font-size:8px; letter-spacing:.7px; } .signin-panel-top>.ui-icon { display:none; } .signin-mobile-brand { display:inline-flex; color:#4e366c; font-size:22px; } .signin-form-wrap { padding:42px 0 30px; } .signin-form-wrap h2 { font-size:34px; } .signin-welcome-icon { margin-bottom:24px; } .signin-subtitle { margin-bottom:26px; } .signin-panel-bottom { margin-top:10px; } }
+@media(max-width:359px) { .signin-panel { padding:23px 20px; } .signin-panel-top>span { display:none; } .signin-form-wrap h2 { font-size:31px; } }
+@media(prefers-reduced-motion:reduce) { .signin-enter,.signin-preview { animation:none; } .signin-page input,.signin-submit { transition:none; } .signin-submit:hover { transform:none; } }

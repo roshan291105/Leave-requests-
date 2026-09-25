@@ -1,0 +1,16 @@
+<section class="card salary-bulk-card">
+  <div class="card-head"><div><span class="overline">PAY EMPLOYEES · {{month|salary_month_label|upper}}</span><h3>Select employees to pay</h3></div><a class="btn ghost" href="{{url_for('department_salaries')}}">Department salaries</a></div>
+  <p class="department-salary-help">Select all eligible employees or choose individuals. New records use the department rate with no allowances or deductions. Saved salaries use their existing net pay.</p>
+  {% if error %}<p class="form-alert" role="alert">{{error}}</p>{% endif %}
+  {% if payroll %}<form method="post" action="{{url_for('pay_selected_salaries')}}" data-bulk-salary-form>
+    <input type="hidden" name="csrf_token" value="{{salary_csrf_token}}">
+    <input type="hidden" name="salary_month" value="{{month}}">
+    <input type="hidden" name="department" value="{{selected_department}}">
+    <div class="salary-selection-tools"><label><input type="checkbox" data-salary-select-all {{'disabled' if not payable_count}}>Select all eligible employees ({{payable_count}})</label><span data-salary-selection-count aria-live="polite">0 selected</span></div>
+    <div class="table-wrap"><table><thead><tr><th>SELECT</th><th>EMPLOYEE</th><th>DEPARTMENT</th><th>NET PAY · INR</th><th>AMOUNT SOURCE</th><th>STATUS</th></tr></thead><tbody>
+    {% for person in payroll %}<tr><td><input type="checkbox" name="employee_id" value="{{person.employee_id}}" data-salary-select data-net-pay="{{person.net_pay if person.net_pay is not none else 0}}" aria-label="Select {{person.full_name}}" {{'disabled' if not person.payable}}>{% if person.payable %}<input type="hidden" name="preview_{{person.employee_id}}" value="{{person.preview_token}}">{% endif %}</td><td><strong>{{person.full_name}}</strong><small>{{person.employee_code}}</small></td><td>{{person.department}}</td><td class="salary-number"><strong>{{person.net_pay|salary_money if person.net_pay is not none else 'Not set'}}</strong></td><td>{{'Saved salary' if person.salary_id else 'Department rate'}}</td><td>{% if person.status=='PAID' %}<span class="status approved">Already paid</span>{% elif not person.payable %}<a class="salary-edit" href="{{url_for('department_salaries')}}">Set rate</a>{% else %}<span class="status pending">{{'Pending' if person.salary_id else 'Ready to create'}}</span>{% endif %}</td></tr>{% endfor %}
+    </tbody></table></div>
+    <div class="salary-bulk-footer"><div class="salary-selected-total"><span>Selected net pay</span><strong data-salary-selected-total aria-live="polite">₹0.00</strong><small>Records payment in Dayora; no bank transfer.</small></div><label>Payment date<input type="date" name="paid_on" value="{{today}}" max="{{today}}" required></label><button type="submit" class="btn primary" data-pay-selected {{'disabled' if not payable_count}}>Mark selected as paid</button></div>
+    <noscript><p class="department-salary-help">Select the employees using the checkboxes, then mark them paid. The amount beside each employee is the amount that will be recorded.</p></noscript>
+  </form>{% else %}<p class="empty">No active employees in this department.</p>{% endif %}
+</section>

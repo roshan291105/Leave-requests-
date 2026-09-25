@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% block title %}Department salaries · Dayora{% endblock %}
+{% block heading %}Department salaries{% endblock %}
+{% block content %}
+<section class="salary-heading"><div><span class="overline">ADMINISTRATOR ACCESS ONLY</span><h2>Set pay by department.</h2><p>Choose a monthly base salary for each department’s employees.</p></div><a class="btn ghost" href="{{url_for('salaries')}}">Back to salaries</a></section>
+<section class="card department-salary-card">
+  <div class="card-head"><div><span class="overline">MONTHLY DEFAULTS · INR</span><h3>Department salary rates</h3></div></div>
+  <p class="department-salary-help">The initial ₹20,000–₹35,000 amounts are demo starting values. Adjust them to your budget. These rates apply when creating a new monthly salary; saved employee salaries keep their amounts.</p>
+  {% if error %}<p class="form-alert" role="alert">{{error}}</p>{% endif %}
+  <form method="post" action="{{url_for('department_salaries')}}" data-department-salaries>
+    <input type="hidden" name="csrf_token" value="{{salary_csrf_token}}">
+    <div class="table-wrap"><table><thead><tr><th>DEPARTMENT</th><th>ACTIVE EMPLOYEES</th><th>MONTHLY SALARY PER EMPLOYEE</th><th>DEFAULT BASE-PAY TOTAL</th></tr></thead><tbody>
+    {% for department in departments %}<tr data-department-rate-row data-employee-count="{{department.employee_count}}"><td><strong>{{department.department}}</strong>{% if department.basic_pay is none %}<small>Save a rate to enable bulk payment.</small>{% endif %}<input type="hidden" name="department" value="{{department.department}}"></td><td>{{department.employee_count}}</td><td><label class="department-rate-input"><span class="salary-currency">INR per month</span><input type="number" name="basic_pay" value="{{department.input_amount}}" min="0.01" max="99999999.99" step="0.01" aria-label="Monthly salary for {{department.department}}" data-department-rate required></label></td><td class="salary-number" data-department-total>—</td></tr>{% else %}<tr><td colspan="4" class="empty">Register an employee to add a department.</td></tr>{% endfor %}
+    </tbody></table></div>
+    <div class="department-salary-footer"><div><span>Monthly base pay for all active employees</span><strong data-department-grand-total aria-live="polite">—</strong><small>Individual allowances and deductions are separate.</small></div><button type="submit" class="btn primary" {{'disabled' if not departments}}>Save department salaries</button></div>
+  </form>
+</section>
+{% endblock %}

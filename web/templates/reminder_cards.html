@@ -1,0 +1,16 @@
+{% from 'ui_icons.html' import icon %}
+<div class="admin-reminder-grid">
+  {% for reminder in admin_reminders.cards %}
+  <article class="admin-reminder-card reminder-is-{{reminder.state}}" data-reminder-kind="{{reminder.kind}}">
+    <div class="reminder-card-top"><span class="reminder-icon {{reminder.kind}}">{{icon(reminder.icon)}}</span><span class="reminder-frequency">{{reminder.frequency}}</span></div>
+    <h3>{{reminder.title}}</h3><p class="reminder-period">{{reminder.period_label}}</p>
+    <span class="reminder-state">{{reminder.state_label}}</span>
+    <p class="reminder-detail">{% if reminder.kind == 'attendance' and reminder.complete_label == 'Day off' %}Today is a day off in your work schedule. Attendance records are still available to review.{% else %}{{reminder.detail}}{% endif %}</p>
+    {% if reminder.kind == 'salary' %}<p class="reminder-due-date">Reminder date: {{admin_reminders.salary_due.strftime('%d %b %Y')}}</p>{% endif %}
+    <a class="reminder-action" href="{{url_for(reminder.endpoint, **reminder.params)}}">{{reminder.action}} {{icon('arrow')}}</a>
+    {% if not compact_reminders|default(false) and (not reminder.complete or reminder.reviewed) %}
+    <form class="reminder-review" method="post" action="{{url_for('review_admin_reminder')}}"><input type="hidden" name="csrf_token" value="{{reminder_csrf_token}}"><input type="hidden" name="kind" value="{{reminder.kind}}"><input type="hidden" name="period" value="{{reminder.period}}"><input type="hidden" name="reviewed" value="{{'0' if reminder.reviewed else '1'}}"><button type="submit">{{'Reopen reminder' if reminder.reviewed else 'Mark as reviewed'}}</button></form>
+    {% endif %}
+  </article>
+  {% endfor %}
+</div>

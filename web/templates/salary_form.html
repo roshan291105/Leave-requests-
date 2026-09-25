@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% block title %}{{'Edit' if record else 'Add'}} salary · Dayora{% endblock %}
+{% block heading %}{{'Edit' if record else 'Add'}} salary{% endblock %}
+{% block content %}
+<section class="salary-heading"><div><span class="overline">ADMINISTRATOR ACCESS ONLY</span><h2>{{'Update a salary record.' if record else 'Add a monthly salary.'}}</h2><p>Save pay details and payment status for the employee to view.</p></div><a class="btn ghost" href="{{url_for('salaries', month=record.salary_month if record else form.get('salary_month'))}}">Back to salaries</a></section>
+<div class="salary-form-layout"><form method="post" action="{{url_for('edit_salary', salary_id=record.id) if record else url_for('new_salary')}}" class="card salary-form" data-salary-form>
+  <input type="hidden" name="csrf_token" value="{{salary_csrf_token}}">
+  {% if error %}<div class="form-alert" role="alert">{{error}}</div>{% endif %}
+  <fieldset><legend>Employee and month</legend><div class="form-grid">
+    {% if record %}<label>Employee<input value="{{record.full_name}} · {{record.employee_code}}" readonly></label><label>Salary month<input value="{{record.salary_month|salary_month_label}}" readonly></label>
+    {% else %}<label>Employee<select name="employee_id" required><option value="">Choose an employee</option>{% for employee in employees %}<option value="{{employee.id}}" {{'selected' if form.get('employee_id')==employee.id|string}}>{{employee.full_name}} · {{employee.employee_code}}{{' (inactive)' if not employee.active}}</option>{% endfor %}</select></label><label>Salary month<input type="month" name="salary_month" value="{{form.get('salary_month', '')}}" required></label>{% endif %}
+  </div></fieldset>
+  <fieldset><legend>Salary amounts <small>INR</small></legend><div class="salary-amount-fields">
+    <label>Basic pay<input type="number" name="basic_pay" min="0" max="99999999.99" step="0.01" value="{{form.get('basic_pay', '')}}" data-salary-amount required></label>
+    <label>Allowances<input type="number" name="allowances" min="0" max="99999999.99" step="0.01" value="{{form.get('allowances', '0.00')}}" data-salary-amount required></label>
+    <label>Deductions<input type="number" name="deductions" min="0" max="99999999.99" step="0.01" value="{{form.get('deductions', '0.00')}}" data-salary-amount required></label>
+  </div></fieldset>
+  <fieldset><legend>Payment details</legend><div class="form-grid">
+    <label>Payment status<select name="status" data-salary-status><option value="PENDING" {{'selected' if form.get('status')=='PENDING'}}>Pending</option><option value="PAID" {{'selected' if form.get('status')=='PAID'}}>Paid</option></select></label>
+    <label>Payment date<input type="date" name="paid_on" max="{{today}}" value="{{form.get('paid_on') or ''}}" data-salary-paid-on><small class="field-hint">Required when the salary is marked paid.</small></label>
+    <label class="full">Notes for the employee<textarea name="notes" rows="4" maxlength="1000" placeholder="Optional details about this month's salary">{{form.get('notes', '')}}</textarea><small class="field-hint">These notes are visible to the employee.</small></label>
+  </div></fieldset>
+  <div class="salary-form-actions"><a class="btn ghost" href="{{url_for('salaries', month=record.salary_month if record else form.get('salary_month'))}}">Cancel</a><button type="submit" class="btn primary">Save salary</button></div>
+</form><aside class="card salary-preview"><span class="overline">NET PAY PREVIEW · INR</span><h2 data-salary-net aria-live="polite">—</h2><p>Basic pay + allowances − deductions</p><hr><h3>Visible after saving</h3><p>The employee can view this record and its payment status in My salary. Only administrators can make changes.</p></aside></div>
+{% endblock %}

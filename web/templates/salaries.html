@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% set is_admin = session.role == 'ADMIN' %}
+{% block title %}{{'Team salaries' if is_admin else 'My salary'}} · Dayora{% endblock %}
+{% block heading %}{{'Team salaries' if is_admin else 'My salary'}}{% endblock %}
+{% block content %}
+<section class="salary-heading">
+  <div><span class="overline">{{'SALARY MANAGEMENT' if is_admin else 'YOUR MONTHLY PAY'}}</span><h2>{{month|salary_month_label}}</h2><p>{{'Manage monthly pay and payment status for your employees.' if is_admin else 'Your salary details and payment history, in one place.'}}</p></div>
+  <div class="salary-toolbar"><form method="get" action="{{url_for('salaries')}}"><label>Salary month<input type="month" name="month" value="{{month}}" required></label>{% if is_admin %}<label>Department<select name="department"><option value="ALL">All departments</option>{% for department in departments %}<option value="{{department}}" {{'selected' if selected_department==department}}>{{department}}</option>{% endfor %}</select></label>{% endif %}<button type="submit" class="btn ghost">View</button></form>{% if is_admin %}<a class="btn primary" href="{{url_for('new_salary', month=month)}}">Add salary</a>{% endif %}</div>
+</section>
+{% if is_admin %}
+<section class="salary-metrics" aria-label="Monthly salary totals">
+  <article><span>Salary records</span><strong>{{records|length}}</strong><small>{{month|salary_month_label}}</small></article>
+  <article><span>Total net pay</span><strong>{{totals.net|salary_money}}</strong><small>Basic + allowances − deductions</small></article>
+  <article><span>Paid</span><strong class="green">{{totals.paid|salary_money}}</strong><small>Records marked as paid</small></article>
+  <article><span>Pending</span><strong class="orange">{{totals.pending|salary_money}}</strong><small>Awaiting payment</small></article>
+</section>
+{% include 'salary_bulk_pay.html' %}
+<section class="card salary-records">
+  <div class="card-head"><div><span class="overline">MONTHLY RECORDS</span><h3>Employee salaries</h3></div><span class="salary-currency">All amounts in INR</span></div>
+  {% if records %}<div class="table-wrap"><table><thead><tr><th>EMPLOYEE</th><th>BASIC PAY</th><th>ALLOWANCES</th><th>DEDUCTIONS</th><th>NET PAY</th><th>PAYMENT</th><th>ACTION</th></tr></thead><tbody>
+  {% for record in records %}<tr><td><a href="{{url_for('employee_detail', employee_code=record.employee_code)}}"><strong>{{record.full_name}}</strong></a><small>{{record.employee_code}} · {{record.department}}{{' · Inactive' if not record.active}}</small></td><td class="salary-number">{{record.basic_pay|salary_money}}</td><td class="salary-number">{{record.allowances|salary_money}}</td><td class="salary-number">{{record.deductions|salary_money}}</td><td class="salary-number"><strong>{{record.net_pay|salary_money}}</strong></td><td><span class="status {{'approved' if record.status=='PAID' else 'pending'}}">{{record.status|title}}</span>{% if record.paid_on %}<small>{{record.paid_on}}</small>{% endif %}</td><td><a class="salary-edit" href="{{url_for('edit_salary', salary_id=record.id)}}" aria-label="Edit salary for {{record.full_name}}">Edit salary</a></td></tr>{% endfor %}
+  </tbody></table></div>{% else %}<div class="salary-empty">{{icon('wallet')}}<h3>No salary records yet</h3><p>Add an employee’s salary for {{month|salary_month_label}} to get started.</p><a class="btn primary" href="{{url_for('new_salary', month=month)}}">Add salary</a></div>{% endif %}
+</section>
+{% else %}
+{% if current %}
+<section class="salary-pay-card"><div><span class="overline">NET PAY · INR</span><h2>{{current.net_pay|salary_money}}</h2><p>{{current.full_name}} · {{current.employee_code}}</p></div><div class="salary-payment"><span class="status {{'approved' if current.status=='PAID' else 'pending'}}">{{current.status|title}}</span><p>{{'Payment date: ' ~ current.paid_on if current.paid_on else 'Awaiting payment'}}</p></div></section>
+<section class="salary-breakdown">
+  <article class="card"><div class="card-head"><div><span class="overline">SALARY BREAKDOWN</span><h3>{{month|salary_month_label}}</h3></div><span class="salary-currency">INR</span></div><dl><div><dt>Basic pay</dt><dd>{{current.basic_pay|salary_money}}</dd></div><div><dt>Allowances</dt><dd>{{current.allowances|salary_money}}</dd></div><div><dt>Deductions</dt><dd>− {{current.deductions|salary_money}}</dd></div><div class="salary-net-row"><dt>Net pay</dt><dd>{{current.net_pay|salary_money}}</dd></div></dl></article>
+  <article class="card salary-note"><span class="overline">FROM YOUR ADMINISTRATOR</span><h3>Salary notes</h3><p class="salary-note-text">{{current.notes or 'No additional notes for this month.'}}</p><p class="salary-updated">Last updated: {{current.updated_at}}</p><a class="btn ghost" href="{{url_for('messages')}}">Contact admin</a></article>
+</section>
+{% else %}<section class="card salary-empty">{{icon('wallet')}}<h3>No salary details for {{month|salary_month_label}}</h3><p>Your salary will appear here once your administrator adds a record.</p></section>{% endif %}
+<section class="card salary-records"><div class="card-head"><div><span class="overline">YOUR RECORDS</span><h3>Salary history</h3></div><span class="salary-currency">All amounts in INR</span></div>
+{% if history %}<div class="table-wrap"><table><thead><tr><th>MONTH</th><th>NET PAY</th><th>STATUS</th><th>PAYMENT DATE</th></tr></thead><tbody>{% for record in history %}<tr><td><a class="salary-edit" href="{{url_for('salaries', month=record.salary_month)}}">{{record.salary_month|salary_month_label}}</a></td><td class="salary-number"><strong>{{record.net_pay|salary_money}}</strong></td><td><span class="status {{'approved' if record.status=='PAID' else 'pending'}}">{{record.status|title}}</span></td><td>{{record.paid_on or '—'}}</td></tr>{% endfor %}</tbody></table></div>{% else %}<p class="empty">No salary history yet.</p>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

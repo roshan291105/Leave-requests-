@@ -54,6 +54,7 @@ if (start && end) {
 
 document.querySelectorAll('form').forEach((form) => {
   form.addEventListener('submit', (event) => {
+    if (event.defaultPrevented) return;
     if (form.dataset.submitting === 'true') {
       event.preventDefault();
       return;
@@ -171,6 +172,8 @@ document.querySelectorAll('[data-mark-attendance]').forEach((button) => {
 
 document.querySelectorAll('[data-back-button]').forEach((button) => {
   button.addEventListener('click', () => {
+    const fallback = new URL(button.dataset.fallback || '/dashboard', window.location.origin);
+    if (window.location.pathname === fallback.pathname) return;
     let canReturn = false;
     try {
       const previous = new URL(document.referrer);
@@ -181,8 +184,25 @@ document.querySelectorAll('[data-back-button]').forEach((button) => {
       canReturn = false;
     }
     if (canReturn) window.history.back();
-    else window.location.assign(button.dataset.fallback || '/dashboard');
+    else window.location.replace(fallback.href);
   });
+});
+
+document.querySelectorAll('[data-task-title-select]').forEach((select) => {
+  const customField = select.form.querySelector('[data-task-custom-title]');
+  const customInput = customField.querySelector('input');
+  const updateTaskTitle = () => {
+    const isCustom = select.value === '';
+    customField.hidden = !isCustom;
+    customInput.disabled = !isCustom;
+    customInput.required = isCustom;
+  };
+  select.addEventListener('change', () => {
+    updateTaskTitle();
+    if (select.value === '') customInput.focus();
+  });
+  window.addEventListener('pageshow', updateTaskTitle);
+  updateTaskTitle();
 });
 
 document.querySelectorAll('.schedule-row .switch input').forEach((checkbox) => {
@@ -195,4 +215,19 @@ document.querySelectorAll('.schedule-row .switch input').forEach((checkbox) => {
   };
   checkbox.addEventListener('change', refreshScheduleRow);
   refreshScheduleRow();
+});
+
+document.querySelectorAll('[data-schedule-defaults]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const form = button.form;
+    form.querySelectorAll('[data-default-working]').forEach((row) => {
+      const checkbox = row.querySelector('input[type="checkbox"]');
+      checkbox.checked = row.dataset.defaultWorking === '1';
+      row.querySelector('input[name^="start_"]').value = row.dataset.defaultStart;
+      row.querySelector('input[name^="end_"]').value = row.dataset.defaultEnd;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    form.querySelector('[data-schedule-status]').textContent =
+      'Default days and times restored. Click Save work schedule to apply them.';
+  });
 });

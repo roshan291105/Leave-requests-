@@ -1,0 +1,61 @@
+{% extends 'base.html' %}
+{% block title %}My day · Dayora{% endblock %}
+{% block heading %}My day{% endblock %}
+{% block content %}
+<div class="my-day">
+  <section class="day-welcome">
+    <div><span class="overline">A LITTLE FOCUS. A LITTLE PROGRESS.</span><h2>Make today yours, {{ session.name.split()[0] }}.</h2><p>Your next steps and a little room to breathe.</p></div>
+    <span class="day-date">{{ today }}</span>
+  </section>
+  <section class="day-stats" aria-label="My task overview">
+    <article><span>Due today</span><strong>{{ task_summary.due_today }}</strong></article>
+    <article class="{{ 'day-attention' if task_summary.overdue }}"><span>Overdue</span><strong>{{ task_summary.overdue }}</strong></article>
+    <article><span>Estimated work remaining</span><strong>{{ '%g'|format(task_summary.open_minutes / 60) }} <small>h</small></strong></article>
+    <article><span>Tasks completed</span><strong>{{ task_summary.completed }} <small>/ {{ task_summary.total }}</small></strong></article>
+  </section>
+  <div class="day-grid">
+    <section class="card day-priorities" aria-labelledby="day-priorities-heading">
+      <div class="card-head"><div><span class="overline">YOUR NEXT THREE</span><h3 id="day-priorities-heading">Start with what matters</h3></div><a href="{{ url_for('tasks') }}">All tasks →</a></div>
+      <p class="muted">Your nearest deadlines first. Work without a due date follows.</p>
+      {% for task in priorities %}
+      <a class="day-task" href="{{ url_for('tasks') }}#task-{{ task.id }}">
+        <span class="day-task-number">{{ loop.index }}</span><div><strong>{{ task.title }}</strong><p>{{ 'In progress' if task.status == 'IN_PROGRESS' else 'To do' }} · {{ '%g'|format(task.duration_minutes / 60) }} h estimated</p><span class="day-due {{ 'day-overdue' if task.due_date and task.due_date < today }}">{% if not task.due_date %}No due date{% elif task.due_date < today %}Overdue · {{ task.due_date }}{% elif task.due_date == today %}Due today{% else %}Due {{ task.due_date }}{% endif %}</span></div><span aria-hidden="true">↗</span>
+      </a>
+      {% else %}<div class="day-empty">{{ icon('sparkle') }}<h4>A little breathing room.</h4><p>No open tasks. Your next assignment will appear here.</p></div>{% endfor %}
+    </section>
+    <section class="card day-focus" aria-labelledby="focus-heading" data-focus-timer data-employee="{{ session.user_id }}">
+      <span class="overline">ONE THING AT A TIME</span><h3 id="focus-heading">Find your focus</h3>
+      <p>Make space for a task, or take a short break.</p>
+      <label for="focus-duration">Session length</label><select id="focus-duration"><option value="25">25 min · Focus</option><option value="50">50 min · Deep focus</option><option value="5">5 min · Take a break</option></select>
+      <div class="focus-clock" role="timer" aria-label="Time remaining" aria-live="off">25:00</div>
+      <div class="focus-actions"><button type="button" class="btn primary" data-focus-toggle>Start focus</button><button type="button" class="btn ghost" data-focus-reset>Reset</button></div>
+      <p class="focus-message" role="status" aria-live="polite">Ready when you are.</p>
+      <small>Continues when you return in this tab. Your timer is personal and does not update task progress.</small>
+      <noscript><p>Enable JavaScript to use the focus timer.</p></noscript>
+    </section>
+    <section class="card day-checklist" id="personal-checklist" aria-labelledby="checklist-heading">
+      <div class="card-head"><div><span class="overline">SMALL STEPS COUNT</span><h3 id="checklist-heading">My personal checklist</h3></div><span>{{ checklist|selectattr('completed')|list|length }}/{{ checklist|length }} done</span></div>
+      <p class="muted">Your own reminders, saved to your account. Only you can view or change them in the app.</p>
+      <form class="checklist-add" method="post" action="{{ url_for('update_personal_checklist') }}">
+        <input type="hidden" name="csrf_token" value="{{ day_token }}"><input type="hidden" name="action" value="add">
+        <label for="checklist-title">A small next step<input id="checklist-title" name="title" maxlength="160" placeholder="e.g. Prepare questions for the team meeting" required></label><button type="submit" class="btn primary">Add</button>
+      </form>
+      <ul class="checklist-items">
+        {% for item in checklist %}<li class="{{ 'is-complete' if item.completed }}"><form method="post" action="{{ url_for('update_personal_checklist') }}">
+          <input type="hidden" name="csrf_token" value="{{ day_token }}"><input type="hidden" name="item_id" value="{{ item.id }}">
+          <button type="submit" class="checklist-check" name="action" value="{{ 'reopen' if item.completed else 'complete' }}" aria-label="{{ 'Reopen' if item.completed else 'Complete' }}: {{ item.title }}">{{ '✓' if item.completed else '○' }}</button><span>{{ item.title }}</span>
+          <button type="submit" class="checklist-delete" name="action" value="delete" aria-label="Delete: {{ item.title }}">Remove</button>
+        </form></li>{% else %}<li class="day-empty"><p>Something on your mind? Add your first small step.</p></li>{% endfor %}
+      </ul>
+    </section>
+    <section class="card day-schedule" aria-labelledby="day-schedule-heading">
+      <span class="overline">WORK & TIME AWAY</span><h3 id="day-schedule-heading">Your day at a glance</h3>
+      {% if next_leave and next_leave.start_date <= today %}<p class="day-schedule-time">On {{ next_leave.leave_type|lower }} leave</p><p>Through {{ next_leave.end_date }}. Make room for yourself.</p>
+      {% elif schedule and schedule.is_working_day %}<p class="day-schedule-time">{{ schedule.start_time }} – {{ schedule.end_time }}</p><p>{{ schedule.day_name }} work schedule</p>
+      {% else %}<p class="day-schedule-time">A day off</p><p>No work hours scheduled for today.</p>{% endif %}
+      {% if next_leave and next_leave.start_date > today %}<div class="day-leave"><strong>Your next time away</strong><p>{{ next_leave.leave_type }} leave · {{ next_leave.start_date }} to {{ next_leave.end_date }}</p></div>{% endif %}
+      <div class="day-quick-links"><a href="{{ url_for('employee_schedule') }}">My weekly schedule {{ icon('arrow') }}</a><a href="{{ url_for('dashboard') }}#workspace">Request time off {{ icon('arrow') }}</a><a href="{{ url_for('messages') }}">Ask admin a question {{ icon('arrow') }}</a></div>
+    </section>
+  </div>
+</div>
+{% endblock %}

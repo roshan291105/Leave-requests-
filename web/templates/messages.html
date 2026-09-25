@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% block title %}Messages &middot; Dayora{% endblock %}
+{% block heading %}Messages{% endblock %}
+{% block content %}
+<section class="messages-page">
+  <div class="messages-intro"><div><span class="overline">A LITTLE MORE CONNECTED</span><h2>{{'Good conversations. Better teamwork.' if session.role == 'ADMIN' else 'Your voice has a place here.'}}</h2><p>{{'Answer questions and help your team move forward.' if session.role == 'ADMIN' else 'Ask for help, share an idea or talk things through with the admin team.'}}</p></div>
+    {% if session.role == 'EMPLOYEE' %}<a class="btn primary" href="{{url_for('messages')}}#new-message">{{icon('message')}} New conversation</a>{% endif %}
+  </div>
+  {% if error %}<p class="form-alert" role="alert">{{error}}</p>{% endif %}
+  <div class="messages-layout">
+    <aside class="conversation-list" aria-label="Conversations"><div class="conversation-list-head"><h3>{{'Team inbox' if session.role == 'ADMIN' else 'Your conversations'}}</h3><a href="{{url_for('message_thread', conversation_id=conversation.id) if conversation else url_for('messages')}}" class="messages-refresh">Refresh</a></div>
+      {% for thread in conversations %}
+      <a class="conversation-item {{'selected' if conversation and conversation.id == thread.id}}" href="{{url_for('message_thread', conversation_id=thread.id)}}" {% if conversation and conversation.id == thread.id %}aria-current="page"{% endif %}>
+        <span class="conversation-person">{{thread.full_name if session.role == 'ADMIN' else 'Admin team'}}<small>{{thread.updated_at[:10]}}</small></span>
+        <strong>{{thread.subject}}</strong><p>{{thread.preview|truncate(85)}}</p>
+        <span class="conversation-status {{'answered' if thread.last_sender_role == 'ADMIN'}}">{{'Admin replied' if thread.last_sender_role == 'ADMIN' else 'Awaiting admin'}}</span>
+      </a>
+      {% else %}<div class="messages-empty-list">{{icon('message')}}<h4>No conversations yet</h4><p>{{'Employee messages will appear here.' if session.role == 'ADMIN' else 'Start a conversation. Your admin team can reply here.'}}</p></div>{% endfor %}
+    </aside>
+    <article class="conversation-panel">
+    {% if conversation %}
+      <header class="conversation-header"><span class="message-topic">{{conversation.topic}}</span><h2>{{conversation.subject}}</h2><p>{{conversation.full_name}} &middot; {{conversation.department}} &middot; Admin team</p></header>
+      <div class="message-history" aria-label="Message history">
+        {% for message in history %}<div class="message-entry {{'mine' if message.sender_id == session.user_id}}" {% if loop.last %}id="latest-message"{% endif %}>
+          <div class="message-byline"><strong>{{message.full_name}}</strong>{% if message.role == 'ADMIN' %}<span>Admin</span>{% endif %}<time datetime="{{message.created_at.replace(' ', 'T')}}Z" data-message-time>{{message.created_at}} UTC</time></div>
+          <div class="message-bubble">{{message.body}}</div>
+        </div>{% endfor %}
+      </div>
+      <form class="message-compose reply-compose" method="post" action="{{url_for('message_thread', conversation_id=conversation.id)}}">
+        <input type="hidden" name="csrf_token" value="{{message_csrf_token}}">
+        <label for="reply-body">Your reply</label><textarea id="reply-body" name="body" rows="3" required maxlength="2000" placeholder="Write a thoughtful reply..." data-message-body>{{form.get('body','')}}</textarea>
+        <div class="message-compose-footer"><small data-message-count>Up to 2,000 characters</small><button class="btn primary" type="submit">Send reply {{icon('arrow')}}</button></div>
+      </form>
+    {% elif session.role == 'EMPLOYEE' %}
+      <header class="conversation-header" id="new-message"><span class="message-topic">YOU + YOUR ADMIN TEAM</span><h2>Let's talk.</h2><p>Only you and the admin team can access this conversation.</p></header>
+      <form class="message-compose" method="post" action="{{url_for('messages')}}">
+        <input type="hidden" name="csrf_token" value="{{message_csrf_token}}">
+        <label for="message-topic">What is on your mind?</label><select id="message-topic" name="topic" required>{% for topic in topics %}<option {{'selected' if form.get('topic') == topic}}>{{topic}}</option>{% endfor %}</select>
+        <div class="message-starters" aria-label="Suggested conversation starters"><button type="button" data-message-starter="Task clarification">A task question</button><button type="button" data-message-starter="Leave &amp; schedule">My schedule</button><button type="button" data-message-starter="Share an idea">An idea to share</button></div>
+        <label for="message-subject">Subject</label><input id="message-subject" name="subject" required maxlength="120" value="{{form.get('subject','')}}" placeholder="Give your conversation a short title">
+        <label for="message-body">Your message</label><textarea id="message-body" name="body" required rows="6" maxlength="2000" placeholder="Hello! I would like to discuss..." data-message-body>{{form.get('body','')}}</textarea>
+        <div class="message-compose-footer"><small data-message-count>Up to 2,000 characters</small><button class="btn primary" type="submit">Send to admin {{icon('arrow')}}</button></div>
+        <p class="message-delivery-note">Your admin team will receive an in-app notification. Replies appear here, and you will be notified when the admin responds.</p>
+      </form>
+    {% else %}
+      <div class="messages-welcome"><span>{{icon('message')}}</span><h2>A little guidance goes a long way.</h2><p>Choose a conversation from your inbox to read the employee's message and send a reply.</p></div>
+    {% endif %}
+    </article>
+  </div>
+</section>
+{% endblock %}

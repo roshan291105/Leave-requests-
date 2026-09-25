@@ -1,3 +1,67 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign in · Dayora</title><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="{{url_for('static',filename='css/style.css')}}"><link rel="stylesheet" href="{{url_for('static',filename='css/brand.css')}}"></head>
-<body class="login-page"><section class="login-art"><div class="login-logo"><span class="brand-mark"><i></i></span><span>Dayora</span></div><div><p class="overline">A BETTER WAY TO UNPLUG</p><h1>Time away,<br><em>thoughtfully</em> planned.</h1><p>One calm place for your team to request, review and celebrate well-earned time off.</p></div><div class="quote">“Rest is not a reward. It is part of the work.”</div></section>
-<section class="login-panel"><form method="post" class="login-card"><span class="brand-mark large"><i></i></span><p class="overline">WELCOME BACK</p><h2>Sign in to your space</h2><p class="muted">Enter your details to continue to Dayora.</p>{% for category,message in get_flashed_messages(with_categories=true) %}<div class="form-alert">{{message}}</div>{% endfor %}<label>Username<input name="username" placeholder="e.g. employee" required autofocus></label><label>Password<div class="password-wrap"><input type="password" name="password" id="password" placeholder="Enter your password" required><button type="button" data-toggle-password>Show</button></div></label><button class="btn primary wide">Continue <span>→</span></button><div class="demo-hint"><b>Demo access</b><span>employee / employee123</span><span>admin / admin123</span></div></form></section><script src="{{url_for('static',filename='js/app.js')}}"></script></body></html>
+{% from 'ui_icons.html' import icon %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Sign in &middot; Dayora</title>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{url_for('static',filename='css/brand.css')}}">
+  <link rel="stylesheet" href="{{url_for('static',filename='css/login.css')}}">
+  <script defer src="{{url_for('static',filename='js/login.js')}}"></script>
+</head>
+<body class="signin-page">
+  <main class="signin-shell">
+    <section class="signin-story" aria-label="Welcome to Dayora">
+      <div class="signin-story-top"><a href="{{url_for('login')}}" class="signin-brand" aria-label="Dayora sign in"><span class="brand-mark"><i></i></span>Dayora</a><span class="signin-edition">MADE FOR YOUR EVERYDAY</span></div>
+      <div class="signin-story-copy">
+        <div class="signin-kicker"><span></span> PEOPLE. PLANS. POSSIBILITIES.</div>
+        <h1>Good days<br>start with<br><em>a little clarity.</em></h1>
+        <p>Your work, your time, your team.<br>A thoughtful space to bring it all together.</p>
+      </div>
+      <div class="signin-visual" aria-hidden="true">
+        <div class="signin-glow"></div><div class="signin-orbit"></div><div class="signin-orbit second"></div>
+        <div class="signin-preview">
+          <div class="signin-preview-head"><span>{{icon('calendar')}}</span><strong>Room for a better week</strong><i></i></div>
+          <div class="signin-preview-line"></div>
+          <div class="signin-week"><span>MON</span><span>TUE</span><span>WED</span><span>THU</span><span>FRI</span></div>
+          <div class="signin-week-blocks"><span></span><span></span><span></span><span></span><span></span></div>
+          <div class="signin-preview-footer">{{icon('sparkle')}} A little focus. A little breathing room.</div>
+        </div>
+        <div class="signin-floating-note"><span>{{icon('check')}}</span><div><strong>A little more in sync.</strong><p>One space. Your whole team.</p></div></div>
+        <span class="signin-star">{{icon('sparkle')}}</span>
+      </div>
+      <div class="signin-story-bottom"><div class="signin-feature-list"><span>{{icon('tasks')}} Work together</span><span>{{icon('calendar')}} Plan time</span><span>{{icon('message')}} Stay connected</span></div><span>THE DAYORA WAY</span></div>
+    </section>
+
+    <section class="signin-panel" aria-labelledby="signin-heading">
+      <div class="signin-panel-top"><a href="{{url_for('login')}}" class="signin-brand signin-mobile-brand" aria-label="Dayora sign in"><span class="brand-mark"><i></i></span>Dayora</a>{{icon('sparkle')}}<span>YOUR DAY, WITH A LITTLE MORE SPACE</span></div>
+      <div class="signin-form-wrap signin-enter">
+        <div class="signin-welcome-icon">{{icon('workspace')}}</div>
+        <p class="signin-overline">A FRESH START, EVERY DAY</p>
+        <h2 id="signin-heading">Hello again.</h2>
+        <p class="signin-subtitle">Good to have you here.<br>Sign in and make yourself at home.</p>
+        {% for category,message in get_flashed_messages(with_categories=true) %}<div class="signin-alert {{'success' if category == 'success'}}" role="{{'status' if category == 'success' else 'alert'}}">{{message}}</div>{% endfor %}
+        <form method="post" action="{{url_for('login')}}" class="signin-form">
+          <label for="username">Username</label>
+          <div class="signin-field">{{icon('people')}}<input id="username" name="username" placeholder="Enter your username" value="{{request.form.get('username','')}}" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus></div>
+          <label for="password">Password</label>
+          <div class="signin-field"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="11" rx="3"/><path d="M8 10V7a4 4 0 0 1 8 0v3m-4 5v2"/></svg><input id="password" type="password" name="password" placeholder="Enter your password" autocomplete="current-password" required><button type="button" class="signin-password-toggle" data-login-password aria-label="Show password" aria-controls="password" aria-pressed="false">Show</button></div>
+          <button type="submit" class="signin-submit"><span data-submit-label>Sign in</span>{{icon('arrow')}}</button>
+          <p class="signin-account-note">{{icon('people')}} One sign-in for employees and admins.</p>
+        </form>
+        <details class="signin-demo">
+          <summary>Just exploring? Try a demo account</summary>
+          <div class="signin-demo-grid"><button type="button" class="signin-demo-choice" data-demo-username="Kavin" data-demo-password="Kavin" data-demo-role="Employee"><strong>Employee</strong><span>Kavin / Kavin</span></button><button type="button" class="signin-demo-choice" data-demo-username="admin" data-demo-password="admin123" data-demo-role="Admin"><strong>Admin</strong><span>admin / admin123</span></button></div>
+          <p>Choose an account to fill the sign-in details.</p>
+          <div class="signin-status" data-demo-status role="status" aria-live="polite"></div>
+        </details>
+      </div>
+      <footer class="signin-panel-bottom">Designed for people.<span>&middot;</span>Made for your day.</footer>
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,75 @@
+{% from 'ui_icons.html' import icon %}
+{% set is_admin = session.role == 'ADMIN' %}
+<div class="home-page">
+  <section class="home-welcome home-reveal">
+    <div><div class="home-eyebrow"><span></span> A LITTLE CLARITY FOR YOUR DAY</div>
+      <h2 data-time-greeting data-name="{{session.name.split()[0]}}">{{time_greeting}}, {{session.name.split()[0]}}.</h2>
+      <p>Your people, your plans, your next step. All in one place.</p>
+    </div>
+    <div class="home-date"><span class="home-date-icon">{{icon('calendar')}}</span><div><span>TODAY</span><strong data-home-date>{{current_year}} · A fresh start</strong></div></div>
+  </section>
+
+  {% if not is_admin %}<a class="home-connect home-reveal" href="{{ url_for('my_day') }}"><span class="home-connect-icon">{{ icon('sparkle') }}</span><div><strong>A day that feels a little more yours.</strong><p>Your priority tasks, a focus timer, and a personal checklist.</p></div><span class="home-connect-action">Open My day {{ icon('arrow') }}</span></a>{% endif %}
+  <div class="home-feature-grid">
+    <section class="home-hero home-reveal">
+      <div class="home-hero-copy">
+        <span class="home-hero-label">{{icon('sparkle')}} YOUR PEOPLE WORKSPACE</span>
+        <h2>More space for<br>your <em>best work.</em></h2>
+        <p>Bring your team’s day together.<br>Make plans, find your focus, and keep things moving.</p>
+        <a class="home-workspace-button" href="{{url_for('dashboard')}}#workspace" data-workspace-link>{{icon('workspace')}} Workspace {{icon('arrow')}}</a>
+        <div class="home-hero-note"><span class="home-note-line"></span> A calmer way to work, together.</div>
+      </div>
+      <div class="home-art" aria-hidden="true">
+        <div class="home-art-orbit orbit-one"></div><div class="home-art-orbit orbit-two"></div>
+        <div class="home-art-glow"></div>
+        <div class="home-art-tile tile-back"></div>
+        <div class="home-art-tile tile-front">
+          <div class="art-tile-heading"><span class="brand-mark"><i></i></span><span>Room for<br><b>your day.</b></span></div>
+          <div class="art-tile-line"></div>
+          <div class="art-week"><i>M</i><i>T</i><i>W</i><i>T</i><i>F</i></div>
+          <div class="art-blocks"><span></span><span></span><span></span><span></span><span></span></div>
+          <div class="art-focus"><span></span> Work in balance.</div>
+        </div>
+        <div class="home-art-badge">{{icon('check')}} A little more in sync.</div>
+        <span class="art-star star-one">✦</span><span class="art-star star-two">✦</span>
+      </div>
+    </section>
+
+    <aside class="home-side-cards">
+      <a class="home-focus-card home-reveal" href="{{url_for('admin_requests' if is_admin else 'employee_schedule')}}">
+        <div class="home-card-top"><span class="home-mini-icon">{{icon('calendar' if is_admin else 'clock')}}</span><span class="home-small-label">YOUR NEXT STEP</span>{{icon('arrow-up')}}</div>
+        <h3>{{ 'Give your team' if is_admin else 'Find your rhythm.' }}{% if is_admin %}<br>a clear path.{% endif %}</h3>
+        <p>{{ 'A quick review can make someone’s plans a little clearer.' if is_admin else 'See your work schedule and make a little space for the day ahead.' }}</p>
+        <span class="home-card-action">{{ 'Review leave requests' if is_admin else 'View my schedule' }} {{icon('arrow')}}</span>
+      </a>
+      <a class="home-updates-card home-reveal" href="{{url_for('notifications')}}">
+        <span class="home-updates-icon">{{icon('bell')}}</span>
+        <div><span class="home-small-label">STAY IN THE LOOP</span><h3>{{unread_count}} unread update{{'s' if unread_count != 1}}</h3><p>Your latest team activity.</p></div>
+        {{icon('arrow-up')}}
+      </a>
+    </aside>
+  </div>
+
+  <a class="home-connect home-reveal" href="{{url_for('messages')}}">
+    <span class="home-connect-icon">{{icon('message')}}</span>
+    <div><strong>{{'Stay close to your team.' if is_admin else 'A conversation can make your day easier.'}}</strong><p>{{'Read employee questions, share guidance and keep the conversation going.' if is_admin else 'Ask a question, share an idea or get a little guidance from your admin team.'}}</p></div>
+    <span class="home-connect-action">{{'Open messages' if is_admin else 'Talk to admin'}} {{icon('arrow')}}</span>
+  </a>
+  {% if is_admin %}<section class="home-admin-reminders" aria-labelledby="home-reminders-heading"><div class="reminder-section-heading"><div><span class="home-eyebrow">YOUR ADMIN CHECKLIST</span><h2 id="home-reminders-heading">A little reminder for your day.</h2></div><a href="{{url_for('admin_reminders')}}">View reminders {{icon('arrow')}}</a></div>{% set compact_reminders = true %}{% include 'reminder_cards.html' %}</section>{% endif %}
+  <section class="home-shortcuts home-reveal" aria-labelledby="shortcuts-heading">
+    <div class="home-section-heading"><div><span class="home-eyebrow">LESS SEARCHING. MORE DOING.</span><h2 id="shortcuts-heading">Where would you like to go?</h2></div><span class="home-section-caption">Your everyday essentials</span></div>
+    <div class="home-shortcut-grid">
+      {% if is_admin %}
+        {% set shortcuts = [('clock', 'Attendance', 'A clear view of who’s in today.', 'attendance', 'lavender'), ('tasks', 'Team tasks', 'Give great work a next step.', 'tasks', 'peach'), ('people', 'Employees', 'The people behind the progress.', 'employees', 'mint'), ('calendar', 'Leave requests', 'Make room for time away.', 'admin_requests', 'blue'), ('settings', 'Admin Center', 'Keep your team’s week in sync.', 'admin_center', 'rose'), ('bell', 'Notifications', 'Small updates. Nothing missed.', 'notifications', 'yellow')] %}
+      {% else %}
+        {% set shortcuts = [('tasks', 'My tasks', 'Your next steps, clearly laid out.', 'tasks', 'lavender'), ('clock', 'My schedule', 'Know what your week looks like.', 'employee_schedule', 'mint'), ('bell', 'Notifications', 'Keep up with your latest updates.', 'notifications', 'peach')] %}
+      {% endif %}
+      {% set shortcuts = shortcuts + [('wallet', 'Salary' if is_admin else 'My salary', 'Manage monthly pay and payment records.' if is_admin else 'View your pay details and salary history.', 'salaries', 'lavender')] %}
+      {% for glyph, title, description, endpoint, tone in shortcuts %}
+      <a class="home-shortcut" href="{{url_for(endpoint)}}"><div class="home-shortcut-top"><span class="home-shortcut-icon {{tone}}">{{icon(glyph)}}</span>{{icon('arrow-up', 'shortcut-arrow')}}</div><h3>{{title}}</h3><p>{{description}}</p></a>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="home-bottom-note home-reveal"><span>{{icon('sparkle')}} Designed for people. Made for your day.</span><span>One team. A little more connected.</span></section>
+</div>
