@@ -31,7 +31,7 @@ pg_url = (
 app = Flask(__name__)
 app.config.update(
     SECRET_KEY=os.getenv("LEAVE_SECRET", "change-me-in-production"),
-    DATABASE=BASE_DIR / "leave.db"
+    DATABASE=os.getenv("DATABASE_URL") or pg_url
 )
 def pg_connection():
     return psycopg.connect(
@@ -229,7 +229,15 @@ def login_required(role=None):
         def wrapped(*args, **kwargs):
             if not session.get("user_id"):
                 return redirect(url_for("login"))
-            current_user = db().execute("SELECT full_name,role,active FROM users WHERE id=?", (session["user_id"],)).fetchone()
+            if request.endpoint == "unread_notifications_api":
+                # Keep the live account/role check, but fetch the badge in the same query.
+                current_user = db().execute("""SELECT u.full_name,u.role,u.active,
+                    (SELECT COUNT(*) FROM notifications n WHERE n.user_id=u.id AND n.is_read=0) AS unread_count
+                    FROM users u WHERE u.id=?""", (session["user_id"],)).fetchone()
+                if current_user:
+                    g.unread_count = current_user["unread_count"]
+            else:
+                current_user = db().execute("SELECT full_name,role,active FROM users WHERE id=?", (session["user_id"],)).fetchone()
             if not current_user or not current_user["active"]:
                 session.clear()
                 return redirect(url_for("login"))
@@ -815,7 +823,8 @@ def attendance():
             item["duration"] = f"{minutes // 60}h {minutes % 60}m"
         records.append(item)
     summary = {key: sum(1 for row in records if row["display_status"] == key) for key in ("PRESENT", "LATE", "ABSENT", "ON LEAVE")}
-    schedule = db().execute("SELECT * FROM work_schedule WHERE weekday=?", (selected_day.weekday(),)).fetchone()
+    schedules = {row["weekday"]: row for row in db().execute("SELECT * FROM work_schedule").fetchall()}
+    schedule = schedules.get(selected_day.weekday())
     unmarked_count = sum(1 for row in records if row["active"] and not row["status"] and not row["on_leave"])
     bulk_check_in = schedule["start_time"] if schedule and schedule["start_time"] else "09:00"
     attendance_csrf_token = session.setdefault("attendance_csrf_token", secrets.token_urlsafe(32))
@@ -831,31 +840,40 @@ def attendance():
         "average": f"{worked_minutes // completed_shifts // 60}h {worked_minutes // completed_shifts % 60}m" if completed_shifts else "0h 0m",
         "completed": completed_shifts,
     }
-    employee_condition = " AND u.department=?" if department != "ALL" else ""
-    employee_params = [department] if department != "ALL" else []
-    total_employees = db().execute("SELECT COUNT(*) FROM users u WHERE u.role='EMPLOYEE' AND u.active=1" + employee_condition, employee_params).fetchone()[0]
+    analysis_days = [selected_day - timedelta(days=offset) for offset in range(6, -1, -1)]
+    day_values = ",".join("(CAST(? AS TEXT))" for _ in analysis_days)
+    employee_filter = "WHERE department=?" if department != "ALL" else ""
+    chart_params = [item.isoformat() for item in analysis_days]
+    if department != "ALL":
+        chart_params.append(department)
+    chart_rows = db().execute(f"""
+        WITH days(day_text) AS (VALUES {day_values}),
+        filtered_users AS (SELECT id,role,active FROM users {employee_filter})
+        SELECT d.day_text,
+            (SELECT COUNT(*) FROM filtered_users WHERE role='EMPLOYEE' AND active=1) AS active_total,
+            (SELECT COUNT(*) FROM filtered_users u WHERE u.role='EMPLOYEE' AND u.active=0
+                AND (EXISTS(SELECT 1 FROM attendance a WHERE a.employee_id=u.id AND a.attendance_date=d.day_text)
+                  OR EXISTS(SELECT 1 FROM leave_requests l WHERE l.employee_id=u.id AND l.status='APPROVED'
+                    AND l.start_date<=d.day_text AND l.end_date>=d.day_text))) AS former_total,
+            (SELECT COUNT(*) FROM attendance a JOIN filtered_users u ON u.id=a.employee_id
+                WHERE a.attendance_date=d.day_text) AS marked,
+            (SELECT COUNT(*) FROM attendance a JOIN filtered_users u ON u.id=a.employee_id
+                WHERE a.attendance_date=d.day_text AND a.status='PRESENT') AS present,
+            (SELECT COUNT(*) FROM attendance a JOIN filtered_users u ON u.id=a.employee_id
+                WHERE a.attendance_date=d.day_text AND a.status='LATE') AS late,
+            (SELECT COUNT(DISTINCT l.employee_id) FROM leave_requests l JOIN filtered_users u ON u.id=l.employee_id
+                WHERE l.status='APPROVED' AND l.start_date<=d.day_text AND l.end_date>=d.day_text) AS leave_total
+        FROM days d ORDER BY d.day_text
+        """, chart_params).fetchall()
     analysis = []
-    for offset in range(6, -1, -1):
-        analysis_day = selected_day - timedelta(days=offset)
-        day_text = analysis_day.isoformat()
-        day_schedule = db().execute("SELECT * FROM work_schedule WHERE weekday=?", (analysis_day.weekday(),)).fetchone()
-        former_employees = db().execute("""SELECT COUNT(*) FROM users u WHERE u.role='EMPLOYEE' AND u.active=0
-            AND (EXISTS(SELECT 1 FROM attendance a WHERE a.employee_id=u.id AND a.attendance_date=?)
-                OR EXISTS(SELECT 1 FROM leave_requests l WHERE l.employee_id=u.id AND l.status='APPROVED'
-                          AND l.start_date<=? AND l.end_date>=?))""" + employee_condition,
-            [day_text, day_text, day_text] + employee_params).fetchone()[0]
-        day_total = total_employees + former_employees
-        status_rows = db().execute("""SELECT a.status,COUNT(*) total FROM attendance a JOIN users u ON u.id=a.employee_id
-            WHERE a.attendance_date=?""" + employee_condition + " GROUP BY a.status", [day_text] + employee_params).fetchall()
-        counts = {row["status"]: row["total"] for row in status_rows}
-        leave_count = db().execute("""SELECT COUNT(DISTINCT l.employee_id) FROM leave_requests l JOIN users u ON u.id=l.employee_id
-            WHERE l.status='APPROVED' AND l.start_date<=? AND l.end_date>=?""" + employee_condition,
-            [day_text, day_text] + employee_params).fetchone()[0]
-        marked = sum(counts.values())
-        absent = max(0, day_total - marked - leave_count) if day_schedule["is_working_day"] else 0
-        analysis.append({"date": day_text, "label": analysis_day.strftime("%a"), "working": day_schedule["is_working_day"],
-                         "present": counts.get("PRESENT", 0), "late": counts.get("LATE", 0),
-                         "absent": absent, "leave": leave_count, "total": day_total})
+    for analysis_day, row in zip(analysis_days, chart_rows):
+        day_schedule = schedules.get(analysis_day.weekday())
+        working = day_schedule["is_working_day"] if day_schedule else 0
+        day_total = row["active_total"] + row["former_total"]
+        absent = max(0, day_total - row["marked"] - row["leave_total"]) if working else 0
+        analysis.append({"date": row["day_text"], "label": analysis_day.strftime("%a"), "working": working,
+                         "present": row["present"], "late": row["late"],
+                         "absent": absent, "leave": row["leave_total"], "total": day_total})
     return render_template("attendance.html", records=records, summary=summary, departments=departments,
                            selected_department=department, selected_date=selected_date, schedule=schedule,
                            time_summary=time_summary, analysis=analysis, unmarked_count=unmarked_count,
@@ -1175,8 +1193,15 @@ def register_employee():
             db().rollback()
             error = "An account already uses those details. Check the login ID and try again."
     token = session.setdefault("employee_csrf_token", secrets.token_urlsafe(32))
-    departments = [row["department"] for row in db().execute(
-        "SELECT DISTINCT department FROM users WHERE role='EMPLOYEE' ORDER BY department")]
+    departments = sorted(
+        set(DEFAULT_DEPARTMENT_SALARIES)
+        | {
+            row["department"]
+            for row in db().execute(
+                "SELECT DISTINCT department FROM users WHERE role='EMPLOYEE'"
+            )
+        }
+    )
     return render_template("employee_register.html", departments=departments, employment_types=EMPLOYMENT_TYPES,
                            form=request.form, error=error, employee_csrf_token=token), 400 if error else 200
 
@@ -1620,11 +1645,10 @@ def calendar_api():
 @app.get("/api/notifications/unread")
 @login_required()
 def unread_notifications_api():
-    count = db().execute("SELECT COUNT(*) FROM notifications WHERE user_id=? AND is_read=0", (session["user_id"],)).fetchone()[0]
-    return jsonify({"count": count})
+    return jsonify({"count": g.unread_count})
 
 
 if __name__ == "__main__":
     with app.app_context():
-        init_db()
+        init_db(seed_demo=False)
     app.run(host=os.getenv("LEAVE_HOST", "127.0.0.1"), port=int(os.getenv("LEAVE_PORT", "5000")), debug=os.getenv("LEAVE_DEBUG", "0") == "1")

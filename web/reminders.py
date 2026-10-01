@@ -21,21 +21,33 @@ def init_reminder_schema(connection):
 def admin_reminder_data(connection, admin_id, today=None):
     today = today or date.today()
     day, month = today.isoformat(), today.strftime('%Y-%m')
-    setting = connection.execute('SELECT salary_day FROM admin_reminder_settings WHERE admin_id=?', (admin_id,)).fetchone()
-    salary_day = setting['salary_day'] if setting else 1
+    # One SQL round trip for the counters/settings instead of six.
+    summary = connection.execute(f"""
+        WITH active_users AS (
+            SELECT id FROM users WHERE role='EMPLOYEE' AND active=1
+        ), eligible AS (
+            SELECT u.id FROM active_users u
+            WHERE NOT EXISTS(SELECT 1 FROM leave_requests l WHERE l.employee_id=u.id
+                AND l.status='APPROVED' AND l.start_date<=? AND l.end_date>=?)
+        )
+        SELECT
+            COALESCE((SELECT salary_day FROM admin_reminder_settings WHERE admin_id=?),1) AS salary_day,
+            (SELECT COUNT(*) FROM active_users) AS active,
+            (SELECT COUNT(*) FROM eligible u WHERE NOT EXISTS(
+                SELECT 1 FROM attendance a WHERE a.employee_id=u.id AND a.attendance_date=?)) AS attendance,
+            (SELECT COUNT(*) FROM eligible u WHERE NOT EXISTS(
+                SELECT 1 FROM tasks t WHERE t.employee_id=u.id AND {connection.local_date('t.created_at')}=?)) AS tasks,
+            (SELECT COUNT(*) FROM active_users u WHERE NOT EXISTS(
+                SELECT 1 FROM salary_records s WHERE s.employee_id=u.id AND s.salary_month=? AND s.status='PAID')) AS salary,
+            COALESCE((SELECT is_working_day FROM work_schedule WHERE weekday=?),0) AS working
+        """, (day, day, admin_id, day, day, month, today.weekday())).fetchone()
+    salary_day = summary['salary_day']
     salary_due = today.replace(day=min(salary_day, calendar.monthrange(today.year,today.month)[1]))
-    reviews = {(r['kind'],r['period']) for r in connection.execute('SELECT kind,period FROM admin_reminder_reviews WHERE admin_id=? AND period IN (?,?)', (admin_id,day,month))}
-    active = connection.execute("SELECT COUNT(*) FROM users WHERE role='EMPLOYEE' AND active=1").fetchone()[0]
-    eligible = """u.role='EMPLOYEE' AND u.active=1 AND NOT EXISTS(SELECT 1 FROM leave_requests l
-        WHERE l.employee_id=u.id AND l.status='APPROVED' AND l.start_date<=? AND l.end_date>=?)"""
-    attendance = connection.execute(f"""SELECT COUNT(*) FROM users u WHERE {eligible}
-        AND NOT EXISTS(SELECT 1 FROM attendance a WHERE a.employee_id=u.id AND a.attendance_date=?)""", (day,day,day)).fetchone()[0]
-    tasks = connection.execute(f"""SELECT COUNT(*) FROM users u WHERE {eligible}
-        AND NOT EXISTS(SELECT 1 FROM tasks t WHERE t.employee_id=u.id AND {connection.local_date('t.created_at')}=?)""", (day,day,day)).fetchone()[0]
-    salary = connection.execute("""SELECT COUNT(*) FROM users u WHERE u.role='EMPLOYEE' AND u.active=1
-        AND NOT EXISTS(SELECT 1 FROM salary_records s WHERE s.employee_id=u.id AND s.salary_month=? AND s.status='PAID')""", (month,)).fetchone()[0]
-    schedule = connection.execute('SELECT is_working_day FROM work_schedule WHERE weekday=?', (today.weekday(),)).fetchone()
-    working = bool(schedule and schedule['is_working_day'])
+    reviews = {(r['kind'],r['period']) for r in connection.execute(
+        'SELECT kind,period FROM admin_reminder_reviews WHERE admin_id=? AND period IN (?,?)',
+        (admin_id,day,month))}
+    active, attendance, tasks, salary = (summary[key] for key in ('active','attendance','tasks','salary'))
+    working = bool(summary['working'])
     cards = [
         dict(kind='attendance', title='Record attendance', icon='clock', frequency='Daily', period=day,
              period_label=today.strftime('%d %b %Y'), remaining=attendance, endpoint='attendance',

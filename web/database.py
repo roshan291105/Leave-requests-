@@ -2,6 +2,8 @@
 from datetime import date, datetime
 from decimal import Decimal
 import os
+import atexit
+from threading import Lock
 import re
 import sqlite3
 
@@ -9,6 +11,72 @@ try:
     import psycopg
 except ImportError:
     psycopg = None
+
+try:
+    from psycopg_pool import ConnectionPool
+except ImportError:
+    ConnectionPool = None
+
+
+_pools = {}
+_pool_lock = Lock()
+
+
+def close_database_pools():
+    """Close this process's pools on shutdown (never a parent worker's pool)."""
+    with _pool_lock:
+        pools = [pool for key, pool in _pools.items() if key[0] == os.getpid()]
+        _pools.clear()
+    for pool in pools:
+        pool.close()
+
+
+atexit.register(close_database_pools)
+
+
+def _configure_postgres(connection, schema, timezone):
+    # Run once per physical connection, not once per HTTP request.
+    if schema:
+        with connection.execute(
+            "SELECT 1 FROM pg_namespace WHERE nspname=%s", (schema,)
+        ) as cursor:
+            if not cursor.fetchone():
+                raise RuntimeError("Create LEAVE_DB_SCHEMA in PostgreSQL first")
+        with connection.execute(
+            "SELECT set_config('search_path',%s,false), "
+            "set_config('TimeZone','UTC',false), set_config('dayora.timezone',%s,false)",
+            (schema, timezone),
+        ):
+            pass
+    else:
+        with connection.execute(
+            "SELECT set_config('TimeZone','UTC',false), set_config('dayora.timezone',%s,false)",
+            (timezone,),
+        ):
+            pass
+
+
+def _postgres_pool(dsn, schema, timezone):
+    if ConnectionPool is None:
+        raise RuntimeError("Install updated web/requirements.txt for PostgreSQL pooling.")
+    # Lazy, per-process creation works with Flask reload and Gunicorn workers.
+    key = (os.getpid(), dsn, schema, timezone)
+    with _pool_lock:
+        pool = _pools.get(key)
+        if pool is None:
+            pool = ConnectionPool(
+                conninfo=dsn,
+                kwargs=dict(autocommit=True, connect_timeout=5, application_name="dayora"),
+                min_size=1, max_size=4, timeout=10, max_idle=60,
+                max_lifetime=1800, open=False,
+                configure=lambda connection: _configure_postgres(connection, schema, timezone),
+                check=ConnectionPool.check_connection,
+                name="dayora",
+            )
+            pool.open()
+            _pools[key] = pool
+    return pool
+
 
 INTEGRITY_ERRORS = (sqlite3.IntegrityError,) + ((psycopg.IntegrityError,) if psycopg else ())
 IDENTITY_TABLES = frozenset(("users", "leave_requests", "notifications", "tasks", "personal_checklist",
@@ -94,10 +162,23 @@ class PostgresConnection:
     def __init__(self, dsn):
         if psycopg is None:
             raise RuntimeError("PostgreSQL needs psycopg. Install web/requirements.txt first.")
-        self.raw = psycopg.connect(dsn, autocommit=True, connect_timeout=5, application_name="dayora")
         self._write_locked = False
-        self.raw.execute("SELECT set_config('TimeZone','UTC',false), set_config('dayora.timezone',%s,false)",
-                         (os.getenv("LEAVE_TIMEZONE", "Asia/Kolkata"),)).close()
+        self._pool = None
+        self._closed = False
+        schema = os.getenv("LEAVE_DB_SCHEMA", "").strip()
+        timezone = os.getenv("LEAVE_TIMEZONE", "Asia/Kolkata")
+        if schema and not re.fullmatch(r"[a-z_][a-z0-9_]*", schema):
+            raise ValueError("Invalid LEAVE_DB_SCHEMA")
+        if os.getenv("LEAVE_DB_POOL", "1") != "0":
+            self._pool = _postgres_pool(dsn, schema, timezone)
+            self.raw = self._pool.getconn()
+        else:
+            self.raw = psycopg.connect(dsn, autocommit=True, connect_timeout=5, application_name="dayora")
+            try:
+                _configure_postgres(self.raw, schema, timezone)
+            except Exception:
+                self.raw.close()
+                raise
 
     @property
     def in_transaction(self):
@@ -164,7 +245,23 @@ class PostgresConnection:
         self._write_locked = False
 
     def close(self):
-        self.raw.close()
+        if self._closed:
+            return
+        self._closed = True
+        connection = self.raw
+        try:
+            # An early return or exception must not commit an unfinished write.
+            if not connection.closed and self.in_transaction:
+                connection.rollback()
+        except Exception:
+            connection.close()
+        finally:
+            self._write_locked = False
+            self.raw = None
+            if self._pool is not None:
+                self._pool.putconn(connection)
+            else:
+                connection.close()
 
     def __enter__(self):
         return self
