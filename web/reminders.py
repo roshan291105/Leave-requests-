@@ -21,7 +21,7 @@ def init_reminder_schema(connection):
 def admin_reminder_data(connection, admin_id, today=None):
     today = today or date.today()
     day, month = today.isoformat(), today.strftime('%Y-%m')
-    # One SQL round trip for the counters/settings instead of six.
+    # Fetch counters, settings and this admin's review markers in one round trip.
     summary = connection.execute(f"""
         WITH active_users AS (
             SELECT id FROM users WHERE role='EMPLOYEE' AND active=1
@@ -39,13 +39,14 @@ def admin_reminder_data(connection, admin_id, today=None):
                 SELECT 1 FROM tasks t WHERE t.employee_id=u.id AND {connection.local_date('t.created_at')}=?)) AS tasks,
             (SELECT COUNT(*) FROM active_users u WHERE NOT EXISTS(
                 SELECT 1 FROM salary_records s WHERE s.employee_id=u.id AND s.salary_month=? AND s.status='PAID')) AS salary,
-            COALESCE((SELECT is_working_day FROM work_schedule WHERE weekday=?),0) AS working
-        """, (day, day, admin_id, day, day, month, today.weekday())).fetchone()
+            COALESCE((SELECT is_working_day FROM work_schedule WHERE weekday=?),0) AS working,
+            EXISTS(SELECT 1 FROM admin_reminder_reviews WHERE admin_id=? AND kind='attendance' AND period=?) AS attendance_reviewed,
+            EXISTS(SELECT 1 FROM admin_reminder_reviews WHERE admin_id=? AND kind='tasks' AND period=?) AS tasks_reviewed,
+            EXISTS(SELECT 1 FROM admin_reminder_reviews WHERE admin_id=? AND kind='salary' AND period=?) AS salary_reviewed
+        """, (day, day, admin_id, day, day, month, today.weekday(),
+              admin_id, day, admin_id, day, admin_id, month)).fetchone()
     salary_day = summary['salary_day']
     salary_due = today.replace(day=min(salary_day, calendar.monthrange(today.year,today.month)[1]))
-    reviews = {(r['kind'],r['period']) for r in connection.execute(
-        'SELECT kind,period FROM admin_reminder_reviews WHERE admin_id=? AND period IN (?,?)',
-        (admin_id,day,month))}
     active, attendance, tasks, salary = (summary[key] for key in ('active','attendance','tasks','salary'))
     working = bool(summary['working'])
     cards = [
@@ -63,7 +64,7 @@ def admin_reminder_data(connection, admin_id, today=None):
              complete=salary == 0, complete_label='All marked paid', due=today >= salary_due),
     ]
     for card in cards:
-        card['reviewed'] = (card['kind'],card['period']) in reviews
+        card['reviewed'] = bool(summary[card['kind'] + '_reviewed'])
         card['state'] = 'complete' if card['complete'] else 'reviewed' if card['reviewed'] else 'due' if card['due'] else 'upcoming'
         card['state_label'] = card['complete_label'] if card['complete'] else 'Reviewed' if card['reviewed'] else 'Due now' if card['due'] else 'Upcoming'
         card['needs_attention'] = card['state'] == 'due'

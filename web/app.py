@@ -229,7 +229,7 @@ def login_required(role=None):
         def wrapped(*args, **kwargs):
             if not session.get("user_id"):
                 return redirect(url_for("login"))
-            if request.endpoint == "unread_notifications_api":
+            if request.endpoint == "unread_notifications_api" or (request.method == "GET" and not request.path.startswith("/api/")):
                 # Keep the live account/role check, but fetch the badge in the same query.
                 current_user = db().execute("""SELECT u.full_name,u.role,u.active,
                     (SELECT COUNT(*) FROM notifications n WHERE n.user_id=u.id AND n.is_read=0) AS unread_count
@@ -392,7 +392,10 @@ def postgres_leave_requests():
 def globals_for_templates():
     unread = 0
     if session.get("user_id"):
-        unread = db().execute("SELECT COUNT(*) FROM notifications WHERE user_id=? AND is_read=0", (session["user_id"],)).fetchone()[0]
+        if request.method == "GET" and hasattr(g, "unread_count"):
+            unread = g.unread_count
+        else:
+            unread = db().execute("SELECT COUNT(*) FROM notifications WHERE user_id=? AND is_read=0", (session["user_id"],)).fetchone()[0]
     hour = datetime.now().hour
     time_greeting = "Good morning" if 5 <= hour < 12 else "Good afternoon" if 12 <= hour < 17 else "Good evening" if 17 <= hour < 21 else "Good night"
     context = {"current_year": date.today().year, "unread_count": unread, "time_greeting": time_greeting}
