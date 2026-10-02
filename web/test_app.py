@@ -29,9 +29,9 @@ class LeaveWorkflowTests(unittest.TestCase):
         return start.isoformat(), (start + timedelta(days=2)).isoformat()
 
     def test_employee_can_login_apply_and_cancel(self):
-        response = self.login("employee", "employee123")
+        response = self.login("Kavin", "Kavin")
         self.assertIn(b'data-time-greeting', response.data)
-        self.assertIn(b'data-name="Alex"', response.data)
+        self.assertIn(b'data-name="Kavin"', response.data)
         start, end = self.future_dates()
         response = self.client.post("/leave/apply", data={
             "leave_type": "Annual", "start_date": start, "end_date": end,
@@ -46,7 +46,7 @@ class LeaveWorkflowTests(unittest.TestCase):
         self.assertIn(b"cancelled", response.data)
 
     def test_admin_approval_updates_balance_and_notification(self):
-        self.login("employee", "employee123")
+        self.login("Kavin", "Kavin")
         start, end = self.future_dates(8)
         self.client.post("/leave/apply", data={"leave_type":"Annual","start_date":start,"end_date":end,"reason":"Family travel"})
         self.logout(); self.login("admin", "admin123")
@@ -55,14 +55,14 @@ class LeaveWorkflowTests(unittest.TestCase):
         response = self.client.post(f"/admin/leave/{leave_id}/decide", data={"status":"APPROVED","comment":"Enjoy your break"}, follow_redirects=True)
         self.assertIn(b"approved", response.data)
         with app.app_context():
-            employee = db().execute("SELECT annual_balance FROM users WHERE username='employee'").fetchone()
-            notice = db().execute("SELECT n.message FROM notifications n JOIN users u ON u.id=n.user_id WHERE u.username='employee'").fetchone()
+            employee = db().execute("SELECT annual_balance FROM users WHERE username='Kavin'").fetchone()
+            notice = db().execute("SELECT n.message FROM notifications n JOIN users u ON u.id=n.user_id WHERE u.username='Kavin'").fetchone()
             self.assertEqual(employee["annual_balance"], 15)
             self.assertIn("approved", notice["message"])
 
     def test_validation_permissions_and_filters(self):
         self.assertEqual(self.client.get("/dashboard").status_code, 302)
-        self.login("employee", "employee123")
+        self.login("Kavin", "Kavin")
         yesterday = (date.today() - timedelta(days=1)).isoformat()
         response = self.client.post("/leave/apply", data={"leave_type":"Invalid","start_date":yesterday,"end_date":yesterday,"reason":"Invalid request"}, follow_redirects=True)
         self.assertIn(b"cannot be in the past", response.data)
@@ -70,14 +70,14 @@ class LeaveWorkflowTests(unittest.TestCase):
         self.assertEqual(self.client.get("/admin/requests?status=UNKNOWN").status_code, 200)
 
     def test_signout_clears_session_and_protects_pages(self):
-        self.login("employee", "employee123")
+        self.login("Kavin", "Kavin")
         response = self.client.post("/logout", follow_redirects=True)
         self.assertIn(b"signed out successfully", response.data)
         self.assertEqual(self.client.get("/dashboard").status_code, 302)
         self.assertEqual(self.client.get("/logout").status_code, 405)
 
     def test_admin_has_visible_approve_and_reject_actions(self):
-        self.login("employee", "employee123")
+        self.login("Kavin", "Kavin")
         start, end = self.future_dates(14)
         self.client.post("/leave/apply", data={"leave_type":"Sick","start_date":start,"end_date":end,"reason":"Medical recovery"})
         self.logout(); self.login("admin", "admin123")
@@ -101,9 +101,9 @@ class LeaveWorkflowTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"20 people, one team", response.data)
         with app.app_context():
-            people = db().execute("SELECT username,password FROM users WHERE role='EMPLOYEE'").fetchall()
+            people = db().execute("SELECT username,password,full_name FROM users WHERE role='EMPLOYEE'").fetchall()
             self.assertEqual(len(people), 20)
-            self.assertTrue(all(check_password_hash(person["password"], "employee123") for person in people))
+            self.assertTrue(all(check_password_hash(person["password"], person["full_name"]) for person in people))
             types = {row[0] for row in db().execute("SELECT DISTINCT employment_type FROM users WHERE role='EMPLOYEE'").fetchall()}
             self.assertEqual(types, {"Permanent", "Contract", "Intern", "Part-time", "Probation"})
 
@@ -113,32 +113,32 @@ class LeaveWorkflowTests(unittest.TestCase):
         self.assertEqual(profile.status_code, 200)
         self.assertIn(b"data-back-button", profile.data)
         self.assertIn(b'data-fallback="/dashboard"', profile.data)
-        self.assertIn(b"Priya Sharma", profile.data)
+        self.assertIn(b"Nila", profile.data)
         self.assertIn(b"LEAVE HISTORY", profile.data)
         self.assertIn(b"ATTENDANCE HISTORY", profile.data)
         response = self.client.post("/admin/employees/DYO003/update", data={
-            "username":"priya.new", "full_name":"Priya Sharma", "email":"priya.sharma@dayora.test",
+            "username":"Nila.new", "full_name":"Nila", "email":"nila@dayora.test",
             "department":"Engineering", "employment_type":"Permanent",
             "annual_balance":"20", "sick_balance":"9", "casual_balance":"7", "active":"1"
         }, follow_redirects=True)
-        self.assertIn(b"Updated Priya Sharma", response.data)
+        self.assertIn(b"Updated Nila", response.data)
         self.client.post("/admin/employees/DYO003/reset-password")
         with app.app_context():
             person = db().execute("SELECT * FROM users WHERE employee_code='DYO003'").fetchone()
             self.assertEqual(person["annual_balance"], 20)
-            self.assertEqual(person["email"], "priya.sharma@dayora.test")
-            self.assertEqual(person["username"], "priya.new")
-            self.assertTrue(check_password_hash(person["password"], "employee123"))
+            self.assertEqual(person["email"], "nila@dayora.test")
+            self.assertEqual(person["username"], "Nila.new")
+            self.assertTrue(check_password_hash(person["password"], "Nila"))
             notice = db().execute("SELECT message FROM notifications WHERE user_id=?", (person["id"],)).fetchone()
-            self.assertIn("login ID from priya to priya.new", notice["message"])
+            self.assertIn("login ID from Nila to Nila.new", notice["message"])
         self.logout()
-        old_login = self.login("priya", "employee123")
+        old_login = self.login("Nila", "Nila")
         self.assertIn(b"Invalid username or password", old_login.data)
-        self.login("priya.new", "employee123")
+        self.login("Nila.new", "Nila")
         self.assertEqual(self.client.get("/admin/employees/DYO003").status_code, 302)
 
     def test_admin_center_is_protected_and_updates_schedule(self):
-        self.login("employee", "employee123")
+        self.login("Kavin", "Kavin")
         self.assertEqual(self.client.get("/admin/center").status_code, 302)
         self.logout(); self.login("admin", "admin123")
         center = self.client.get("/admin/center")
@@ -159,7 +159,7 @@ class LeaveWorkflowTests(unittest.TestCase):
             self.assertEqual(sunday["is_working_day"], 0)
             employee_notices = db().execute("SELECT COUNT(*) FROM notifications n JOIN users u ON u.id=n.user_id WHERE u.role='EMPLOYEE'").fetchone()[0]
             self.assertEqual(employee_notices, 20)
-        self.logout(); self.login("employee", "employee123")
+        self.logout(); self.login("Kavin", "Kavin")
         schedule = self.client.get("/schedule")
         self.assertEqual(schedule.status_code, 200)
         self.assertIn(b"08:30", schedule.data)
@@ -167,14 +167,14 @@ class LeaveWorkflowTests(unittest.TestCase):
         self.assertIn(b"Work schedule updated by Roshan", notices.data)
 
     def test_notifications_are_delivered_and_can_be_managed(self):
-        self.login("employee", "employee123")
+        self.login("Kavin", "Kavin")
         start, end = self.future_dates(20)
         self.client.post("/leave/apply", data={"leave_type":"Casual","start_date":start,"end_date":end,"reason":"Personal appointment"})
         self.logout(); self.login("admin", "admin123")
         api = self.client.get("/api/notifications/unread")
         self.assertEqual(api.get_json()["count"], 1)
         page = self.client.get("/notifications")
-        self.assertIn(b"Alex Morgan (DYO001, Permanent) requested", page.data)
+        self.assertIn(b"Kavin (DYO001, Permanent) requested", page.data)
         self.client.post("/notifications/read-all")
         self.assertEqual(self.client.get("/api/notifications/unread").get_json()["count"], 0)
         self.client.post("/notifications/clear-read")
@@ -185,7 +185,7 @@ class LeaveWorkflowTests(unittest.TestCase):
 
     def test_admin_marks_and_corrects_employee_attendance(self):
         attendance_day = (date.today() - timedelta(days=date.today().weekday())).isoformat()
-        self.login("employee", "employee123")
+        self.login("Kavin", "Kavin")
         denied = self.client.post("/admin/attendance/DYO001/mark", data={"attendance_date":attendance_day,"status":"PRESENT"})
         self.assertEqual(denied.status_code, 302)
         self.logout(); self.login("admin", "admin123")
@@ -193,14 +193,14 @@ class LeaveWorkflowTests(unittest.TestCase):
             "attendance_date": attendance_day, "status": "PRESENT",
             "check_in": "09:00", "check_out": "17:30"
         }, follow_redirects=True)
-        self.assertIn(b"Marked Alex Morgan as present", response.data)
+        self.assertIn(b"Marked Kavin as present", response.data)
         with app.app_context():
             record = db().execute("SELECT * FROM attendance").fetchone()
             self.assertEqual(record["status"], "PRESENT")
             self.assertEqual(record["check_out"], "17:30:00")
         register = self.client.get(f"/admin/attendance?date={attendance_day}")
         self.assertEqual(register.status_code, 200)
-        self.assertIn(b"Alex Morgan", register.data)
+        self.assertIn(b"Kavin", register.data)
         self.assertIn(b"19", register.data)
         self.assertIn(b"Seven-day attendance pattern", register.data)
         self.client.post("/admin/attendance/DYO001/mark", data={

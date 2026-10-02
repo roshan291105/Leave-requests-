@@ -1,17 +1,60 @@
 package com.leavems;
 
-import javax.swing.*;
-import javax.swing.border.EmptyBorder;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.DefaultTableCellRenderer;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GradientPaint;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.LayoutManager;
+import java.awt.RenderingHints;
 import java.awt.geom.RoundRectangle2D;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JList;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPasswordField;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTable;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.WindowConstants;
+import javax.swing.border.EmptyBorder;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
 
 public final class LeaveManagementApp {
     private static final Color NAVY = new Color(15, 23, 42);
@@ -20,6 +63,38 @@ public final class LeaveManagementApp {
     private static final Color CYAN = new Color(34, 211, 238);
     private static final Color BG = new Color(241, 245, 249);
     private static final Color TEXT_MUTED = new Color(100, 116, 139);
+    private static final List<DemoEmployee> DEMO_EMPLOYEES = List.of(
+            new DemoEmployee("DYO001", "employee", "Kavin", "Permanent"),
+            new DemoEmployee("DYO002", "jordan", "Arul", "Permanent"),
+            new DemoEmployee("DYO003", "priya", "Nila", "Permanent"),
+            new DemoEmployee("DYO004", "arjun", "Thamizh", "Contract"),
+            new DemoEmployee("DYO005", "ananya", "Kayal", "Permanent"),
+            new DemoEmployee("DYO006", "rohan", "Ezhil", "Permanent"),
+            new DemoEmployee("DYO007", "meera", "Malar", "Permanent"),
+            new DemoEmployee("DYO008", "vikram", "Iniyan", "Contract"),
+            new DemoEmployee("DYO009", "kavya", "Yazhini", "Intern"),
+            new DemoEmployee("DYO010", "aditya", "Cheran", "Part-time"),
+            new DemoEmployee("DYO011", "isha", "Thenmozhi", "Intern"),
+            new DemoEmployee("DYO012", "rahul", "Kathir", "Permanent"),
+            new DemoEmployee("DYO013", "sneha", "Thamarai", "Permanent"),
+            new DemoEmployee("DYO014", "naveen", "Kumaran", "Probation"),
+            new DemoEmployee("DYO015", "divya", "Vennila", "Intern"),
+            new DemoEmployee("DYO016", "karan", "Senthil", "Contract"),
+            new DemoEmployee("DYO017", "aisha", "Oviya", "Probation"),
+            new DemoEmployee("DYO018", "siddharth", "Sezhiyan", "Permanent"),
+            new DemoEmployee("DYO019", "neha", "Poongodi", "Part-time"),
+            new DemoEmployee("DYO020", "varun", "Velan", "Permanent"));
+    private static final List<String> TASK_TITLE_SUGGESTIONS = List.of(
+            "Prepare the Weekly Project Status Report",
+            "Review and Update Employee Attendance Records",
+            "Complete Application Testing and Document Findings",
+            "Resolve Outstanding Customer Support Requests",
+            "Reconcile Monthly Expenses and Submit a Summary",
+            "Update Project Documentation and User Guides",
+            "Prepare the Monthly Sales Performance Report",
+            "Develop the Upcoming Social Media Content Calendar",
+            "Review Inventory Levels and Report Shortages",
+            "Complete Required Training and Submit a Progress Update");
     private final JFrame frame = new JFrame("Employee Leave Management System");
     private final LeaveRepository repository;
 
@@ -97,6 +172,7 @@ public final class LeaveManagementApp {
         requests.add(refreshButton, BorderLayout.SOUTH);
         tabs.addTab("My requests", requests);
         tabs.addTab("Apply for leave", applicationForm(user, () -> { refresh.run(); tabs.setSelectedIndex(0); }));
+        tabs.addTab("My tasks", taskPanel(user));
         root.add(tabs, BorderLayout.CENTER); refresh.run(); setContent(root, new Dimension(1050, 680));
     }
 
@@ -143,7 +219,129 @@ public final class LeaveManagementApp {
         refreshBtn.addActionListener(e -> refresh.run());
         approve.addActionListener(e -> decide(table, model, "APPROVED", refresh));
         reject.addActionListener(e -> decide(table, model, "REJECTED", refresh));
-        root.add(body, BorderLayout.CENTER); refresh.run(); setContent(root, new Dimension(1150, 700));
+        JTabbedPane tabs = styledTabs();
+        tabs.addTab("Leave requests", body);
+        tabs.addTab("Team tasks", taskPanel(user));
+        root.add(tabs, BorderLayout.CENTER); refresh.run(); setContent(root, new Dimension(1150, 700));
+    }
+
+    private JPanel taskPanel(User user) {
+        JPanel panel = new JPanel(new BorderLayout(16, 16));
+        panel.setBackground(BG); panel.setBorder(new EmptyBorder(24, 28, 28, 28));
+        DefaultTableModel model = tableModel("ID", "Task", "Employee", "Assigned by", "Due date", "Progress");
+        JTable taskTable = table(model);
+        List<AssignedTask> visibleTasks = new ArrayList<>();
+        JTextArea details = new JTextArea(6, 24);
+        details.setEditable(false); details.setLineWrap(true); details.setWrapStyleWord(true);
+        details.setFont(new Font("Segoe UI", Font.PLAIN, 14)); details.setBorder(new EmptyBorder(12, 12, 12, 12));
+        JComboBox<String> progress = new JComboBox<>(new String[]{"To do", "In progress", "Completed"});
+        taskTable.getSelectionModel().addListSelectionListener(e -> {
+            if (e.getValueIsAdjusting() || taskTable.getSelectedRow() < 0) return;
+            AssignedTask task = visibleTasks.get(taskTable.convertRowIndexToModel(taskTable.getSelectedRow()));
+            details.setText(task.title() + "\n\n" + task.instructions()); details.setCaretPosition(0);
+            progress.setSelectedItem(taskStatusLabel(task.status()));
+        });
+        Runnable refresh = () -> {
+            try {
+                List<AssignedTask> updated = repository.findTasks(user.id());
+                model.setRowCount(0); visibleTasks.clear(); visibleTasks.addAll(updated);
+                for (AssignedTask task : visibleTasks)
+                    model.addRow(new Object[]{task.id(), task.title(), task.employee(), task.admin(),
+                            task.dueDate() == null ? "No due date" : task.dueDate().toString(), taskStatusLabel(task.status())});
+                details.setText(visibleTasks.isEmpty() ? "No tasks assigned yet." : "Select a task to read its instructions.");
+            } catch (Exception ex) { message(ex.getMessage(), JOptionPane.ERROR_MESSAGE); }
+        };
+        JPanel list = new JPanel(new BorderLayout(12, 12)); list.setOpaque(false);
+        JSplitPane taskDetails = new JSplitPane(JSplitPane.VERTICAL_SPLIT, new JScrollPane(taskTable), new JScrollPane(details));
+        taskDetails.setResizeWeight(.65); taskDetails.setBorder(null);
+        list.add(taskDetails, BorderLayout.CENTER);
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT)); actions.setOpaque(false);
+        JButton refreshButton = new JButton("Refresh tasks"); refreshButton.addActionListener(e -> refresh.run());
+        actions.add(refreshButton);
+        if (user.role().equals("EMPLOYEE")) {
+            JButton update = primaryButton("Update progress");
+            actions.add(progress); actions.add(update);
+            update.addActionListener(e -> {
+                if (taskTable.getSelectedRow() < 0) { message("Select a task first.", JOptionPane.WARNING_MESSAGE); return; }
+                AssignedTask task = visibleTasks.get(taskTable.convertRowIndexToModel(taskTable.getSelectedRow()));
+                String status = switch (progress.getSelectedIndex()) { case 1 -> "IN_PROGRESS"; case 2 -> "COMPLETED"; default -> "TODO"; };
+                try { repository.updateTaskStatus(user.id(), task.id(), status); refresh.run(); }
+                catch (Exception ex) { message(ex.getMessage(), JOptionPane.ERROR_MESSAGE); }
+            });
+        }
+        list.add(actions, BorderLayout.SOUTH);
+        if (user.role().equals("ADMIN")) {
+            JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, taskAssignmentForm(user, refresh), list);
+            split.setDividerLocation(330); split.setBorder(null); panel.add(split, BorderLayout.CENTER);
+        } else panel.add(list, BorderLayout.CENTER);
+        refresh.run(); return panel;
+    }
+
+    private JPanel taskAssignmentForm(User admin, Runnable afterSave) {
+        JPanel outer = new JPanel(new BorderLayout()); outer.setOpaque(false);
+        JPanel form = new RoundPanel(20, Color.WHITE); form.setLayout(new GridBagLayout());
+        form.setBorder(new EmptyBorder(18, 18, 18, 18)); GridBagConstraints c = constraints(); c.weightx = 1;
+        JComboBox<User> employee = new JComboBox<>();
+        employee.setRenderer(new DefaultListCellRenderer() {
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean selected, boolean focus) {
+                String label = value instanceof User person ? person.name() + " (" + person.username() + ")" : "Choose an employee";
+                return super.getListCellRendererComponent(list, label, index, selected, focus);
+            }
+        });
+        try { for (User person : repository.findEmployees()) employee.addItem(person); }
+        catch (Exception ex) { message(ex.getMessage(), JOptionPane.ERROR_MESSAGE); }
+        employee.setSelectedIndex(-1);
+        JTextField title = new JTextField(18), due = new JTextField(18); styleInput(title); styleInput(due);
+        JComboBox<String> titleChoice = new JComboBox<>();
+        titleChoice.addItem("Custom title"); TASK_TITLE_SUGGESTIONS.forEach(titleChoice::addItem);
+        titleChoice.setPrototypeDisplayValue("Choose a title or write your own");
+        titleChoice.getAccessibleContext().setAccessibleName("Task title");
+        title.getAccessibleContext().setAccessibleName("Custom task title");
+        title.setToolTipText("Enter a custom task title (up to 120 characters).");
+        JPanel titleFields = new JPanel(new BorderLayout(0, 8)); titleFields.setOpaque(false);
+        titleFields.add(titleChoice, BorderLayout.NORTH); titleFields.add(title, BorderLayout.CENTER);
+        titleChoice.addActionListener(e -> {
+            boolean custom = titleChoice.getSelectedIndex() == 0;
+            title.setVisible(custom);
+            titleChoice.setToolTipText(Objects.toString(titleChoice.getSelectedItem()));
+            titleFields.revalidate(); form.revalidate(); form.repaint();
+            if (custom) title.requestFocusInWindow();
+        });
+        JTextArea instructions = new JTextArea(6, 18); instructions.setLineWrap(true); instructions.setWrapStyleWord(true);
+        instructions.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        add(form, new JLabel("Assign a task"), c, 0, 0, 1);
+        add(form, new JLabel("Employee"), c, 0, 1, 1); add(form, employee, c, 0, 2, 1);
+        add(form, new JLabel("Task title (choose or write your own)"), c, 0, 3, 1); add(form, titleFields, c, 0, 4, 1);
+        add(form, new JLabel("Instructions (up to 2,000 characters)"), c, 0, 5, 1); add(form, new JScrollPane(instructions), c, 0, 6, 1);
+        add(form, new JLabel("Due date (optional, YYYY-MM-DD)"), c, 0, 7, 1); add(form, due, c, 0, 8, 1);
+        JButton assign = primaryButton("Assign task"); assign.setEnabled(employee.getItemCount() > 0); add(form, assign, c, 0, 9, 1);
+        assign.addActionListener(e -> {
+            try {
+                User selected = (User) employee.getSelectedItem();
+                if (selected == null) throw new IllegalArgumentException("Choose an employee.");
+                LocalDate dueDate = due.getText().isBlank() ? null : LocalDate.parse(due.getText().trim());
+                String taskTitle = titleChoice.getSelectedIndex() == 0 ? title.getText().trim() : Objects.toString(titleChoice.getSelectedItem());
+                repository.assignTask(admin.id(), selected.id(), taskTitle, instructions.getText().trim(), dueDate);
+                title.setText(""); titleChoice.setSelectedIndex(0); instructions.setText(""); due.setText(""); afterSave.run();
+                message("Task assigned to " + selected.name() + ".", JOptionPane.INFORMATION_MESSAGE);
+            } catch (java.time.format.DateTimeParseException ex) { message("Use a valid due date in YYYY-MM-DD format.", JOptionPane.ERROR_MESSAGE); }
+            catch (Exception ex) { message(ex.getMessage(), JOptionPane.ERROR_MESSAGE); }
+        });
+        outer.add(form, BorderLayout.NORTH); return outer;
+    }
+
+    private static String taskStatusLabel(String status) {
+        return switch (status) { case "IN_PROGRESS" -> "In progress"; case "COMPLETED" -> "Completed"; default -> "To do"; };
+    }
+
+    private static void validateTask(String title, String instructions, LocalDate dueDate) {
+        if (title == null || title.isBlank() || title.length() > 120) throw new IllegalArgumentException("Enter a task title between 1 and 120 characters.");
+        if (instructions == null || instructions.isBlank() || instructions.length() > 2000) throw new IllegalArgumentException("Enter instructions between 1 and 2,000 characters.");
+        if (dueDate != null && dueDate.isBefore(LocalDate.now())) throw new IllegalArgumentException("The due date cannot be in the past.");
+    }
+
+    private static void validateTaskStatus(String status) {
+        if (!List.of("TODO", "IN_PROGRESS", "COMPLETED").contains(status)) throw new IllegalArgumentException("Select a valid task status.");
     }
 
     private void decide(JTable table, DefaultTableModel model, String status, Runnable refresh) {
@@ -210,6 +408,9 @@ public final class LeaveManagementApp {
     }
 
     record User(long id, String username, String name, String role) {}
+    record DemoEmployee(String code, String legacyUsername, String name, String employmentType) {}
+    record AssignedTask(long id, long employeeId, String employee, long assignedBy, String admin,
+                        String title, String instructions, LocalDate dueDate, String status) {}
     record LeaveRequest(long id, long employeeId, String employee, String type, LocalDate start, LocalDate end, String reason, String status, String comment) {
         long days() { return ChronoUnit.DAYS.between(start, end) + 1; }
     }
@@ -220,6 +421,10 @@ public final class LeaveManagementApp {
         List<LeaveRequest> findForEmployee(long employeeId);
         List<LeaveRequest> findAll(boolean pendingOnly);
         void decide(long id, String status, String comment);
+        List<User> findEmployees();
+        void assignTask(long adminId, long employeeId, String title, String instructions, LocalDate dueDate);
+        List<AssignedTask> findTasks(long viewerId);
+        void updateTaskStatus(long employeeId, long taskId, String status);
         String description();
     }
 
@@ -235,9 +440,60 @@ public final class LeaveManagementApp {
         private final String url, user, password;
         JdbcRepository(String url, String user, String password) { this.url=url; this.user=user; this.password=password; }
         Connection connection() throws SQLException { return DriverManager.getConnection(url, user, password); }
-        void test() throws SQLException { try (Connection ignored = connection()) {} }
+        void test() throws SQLException {
+            try (Connection c = connection(); Statement statement = c.createStatement()) {
+                statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS tasks (
+                        id BIGINT PRIMARY KEY AUTO_INCREMENT,
+                        employee_id BIGINT NOT NULL,
+                        assigned_by BIGINT NOT NULL,
+                        title VARCHAR(120) NOT NULL,
+                        instructions VARCHAR(2000) NOT NULL,
+                        due_date DATE NULL,
+                        status ENUM('TODO','IN_PROGRESS','COMPLETED') NOT NULL DEFAULT 'TODO',
+                        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (employee_id) REFERENCES users(id),
+                        FOREIGN KEY (assigned_by) REFERENCES users(id)
+                    )
+                    """);
+                migrateEmployeeNames(c);
+            }
+        }
+        private void migrateEmployeeNames(Connection c) throws SQLException {
+            try (Statement statement = c.createStatement()) {
+                statement.executeUpdate("CREATE TABLE IF NOT EXISTS app_migrations (name VARCHAR(100) PRIMARY KEY, applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP)");
+            }
+            c.setAutoCommit(false);
+            try {
+                try (PreparedStatement p = c.prepareStatement("SELECT 1 FROM app_migrations WHERE name='tamil_employee_names_v1'"); ResultSet r = p.executeQuery()) {
+                    if (r.next()) { c.commit(); return; }
+                }
+                for (DemoEmployee demo : DEMO_EMPLOYEES) {
+                    Long employeeId = null;
+                    try (PreparedStatement p = c.prepareStatement("SELECT id FROM users WHERE role='EMPLOYEE' AND (employee_code=? OR (employee_code IS NULL AND username IN (?,?))) ORDER BY id LIMIT 1")) {
+                        p.setString(1, demo.code()); p.setString(2, demo.legacyUsername()); p.setString(3, demo.name());
+                        try (ResultSet r = p.executeQuery()) { if (r.next()) employeeId = r.getLong(1); }
+                    }
+                    if (employeeId != null) {
+                        try (PreparedStatement p = c.prepareStatement("UPDATE users SET username=?,password=?,full_name=?,employee_code=? WHERE id=?")) {
+                            p.setString(1, demo.name()); p.setString(2, demo.name()); p.setString(3, demo.name());
+                            p.setString(4, demo.code()); p.setLong(5, employeeId); p.executeUpdate();
+                        }
+                    } else {
+                        try (PreparedStatement p = c.prepareStatement("INSERT INTO users(username,password,full_name,role,employee_code,employment_type) VALUES(?,?,?,'EMPLOYEE',?,?)")) {
+                            p.setString(1, demo.name()); p.setString(2, demo.name()); p.setString(3, demo.name());
+                            p.setString(4, demo.code()); p.setString(5, demo.employmentType()); p.executeUpdate();
+                        }
+                    }
+                }
+                try (PreparedStatement p = c.prepareStatement("INSERT INTO app_migrations(name) VALUES('tamil_employee_names_v1')")) { p.executeUpdate(); }
+                c.commit();
+            } catch (SQLException e) { c.rollback(); throw e; }
+            finally { c.setAutoCommit(true); }
+        }
         public User authenticate(String username, String password) {
-            String sql="SELECT id,username,full_name,role FROM users WHERE username=? AND password=?";
+            String sql="SELECT id,username,full_name,role FROM users WHERE CAST(username AS BINARY)=CAST(? AS BINARY) AND CAST(password AS BINARY)=CAST(? AS BINARY)";
             try(Connection c=connection(); PreparedStatement p=c.prepareStatement(sql)){ p.setString(1,username);p.setString(2,password);try(ResultSet r=p.executeQuery()){return r.next()?new User(r.getLong(1),r.getString(2),r.getString(3),r.getString(4)):null;}} catch(SQLException e){throw db(e);}
         }
         public void create(long eid,String type,LocalDate start,LocalDate end,String reason){String sql="INSERT INTO leave_requests(employee_id,leave_type,start_date,end_date,reason) VALUES(?,?,?,?,?)";try(Connection c=connection();PreparedStatement p=c.prepareStatement(sql)){p.setLong(1,eid);p.setString(2,type);p.setDate(3,Date.valueOf(start));p.setDate(4,Date.valueOf(end));p.setString(5,reason);p.executeUpdate();}catch(SQLException e){throw db(e);}}
@@ -245,19 +501,106 @@ public final class LeaveManagementApp {
         public List<LeaveRequest> findAll(boolean pending){return query((pending?"WHERE l.status='PENDING' ":"")+"ORDER BY l.created_at DESC",p->{});}
         private List<LeaveRequest> query(String suffix, SqlSetter setter){String sql="SELECT l.id,l.employee_id,u.full_name,l.leave_type,l.start_date,l.end_date,l.reason,l.status,COALESCE(l.admin_comment,'') FROM leave_requests l JOIN users u ON u.id=l.employee_id "+suffix;List<LeaveRequest>x=new ArrayList<>();try(Connection c=connection();PreparedStatement p=c.prepareStatement(sql)){setter.set(p);try(ResultSet r=p.executeQuery()){while(r.next())x.add(new LeaveRequest(r.getLong(1),r.getLong(2),r.getString(3),r.getString(4),r.getDate(5).toLocalDate(),r.getDate(6).toLocalDate(),r.getString(7),r.getString(8),r.getString(9)));}return x;}catch(SQLException e){throw db(e);}}
         public void decide(long id,String status,String comment){String sql="UPDATE leave_requests SET status=?,admin_comment=?,decided_at=CURRENT_TIMESTAMP WHERE id=? AND status='PENDING'";try(Connection c=connection();PreparedStatement p=c.prepareStatement(sql)){p.setString(1,status);p.setString(2,comment);p.setLong(3,id);if(p.executeUpdate()==0)throw new IllegalStateException("Request was already processed.");}catch(SQLException e){throw db(e);}}
+        public List<User> findEmployees() {
+            List<User> employees = new ArrayList<>();
+            try (Connection c = connection(); PreparedStatement p = c.prepareStatement("SELECT id,username,full_name,role FROM users WHERE role='EMPLOYEE' ORDER BY full_name"); ResultSet r = p.executeQuery()) {
+                while (r.next()) employees.add(new User(r.getLong(1), r.getString(2), r.getString(3), r.getString(4)));
+                return employees;
+            } catch (SQLException e) { throw db(e); }
+        }
+        public void assignTask(long adminId, long employeeId, String title, String instructions, LocalDate dueDate) {
+            validateTask(title, instructions, dueDate);
+            String sql = """
+                INSERT INTO tasks(employee_id,assigned_by,title,instructions,due_date)
+                SELECT e.id,a.id,?,?,? FROM users e CROSS JOIN users a
+                WHERE e.id=? AND e.role='EMPLOYEE' AND a.id=? AND a.role='ADMIN'
+                """;
+            try (Connection c = connection(); PreparedStatement p = c.prepareStatement(sql)) {
+                p.setString(1, title.trim()); p.setString(2, instructions.trim());
+                p.setDate(3, dueDate == null ? null : Date.valueOf(dueDate)); p.setLong(4, employeeId); p.setLong(5, adminId);
+                if (p.executeUpdate() == 0) throw new IllegalArgumentException("An administrator must assign the task to a valid employee.");
+            } catch (SQLException e) { throw db(e); }
+        }
+        public List<AssignedTask> findTasks(long viewerId) {
+            String sql = """
+                SELECT t.id,t.employee_id,e.full_name,t.assigned_by,a.full_name,t.title,t.instructions,t.due_date,t.status
+                FROM tasks t JOIN users e ON e.id=t.employee_id JOIN users a ON a.id=t.assigned_by
+                JOIN users v ON v.id=? WHERE v.role='ADMIN' OR (v.role='EMPLOYEE' AND t.employee_id=v.id)
+                ORDER BY (t.status='COMPLETED'), (t.due_date IS NULL), t.due_date, t.id DESC
+                """;
+            List<AssignedTask> tasks = new ArrayList<>();
+            try (Connection c = connection(); PreparedStatement p = c.prepareStatement(sql)) {
+                p.setLong(1, viewerId);
+                try (ResultSet r = p.executeQuery()) {
+                    while (r.next()) {
+                        Date due = r.getDate(8);
+                        tasks.add(new AssignedTask(r.getLong(1), r.getLong(2), r.getString(3), r.getLong(4), r.getString(5),
+                                r.getString(6), r.getString(7), due == null ? null : due.toLocalDate(), r.getString(9)));
+                    }
+                }
+                return tasks;
+            } catch (SQLException e) { throw db(e); }
+        }
+        public void updateTaskStatus(long employeeId, long taskId, String status) {
+            validateTaskStatus(status);
+            String sql = """
+                UPDATE tasks t JOIN users e ON e.id=t.employee_id
+                SET t.status=?,t.updated_at=CURRENT_TIMESTAMP WHERE t.id=? AND e.id=? AND e.role='EMPLOYEE'
+                """;
+            try (Connection c = connection(); PreparedStatement p = c.prepareStatement(sql)) {
+                p.setString(1, status); p.setLong(2, taskId); p.setLong(3, employeeId);
+                if (p.executeUpdate() == 0) throw new IllegalArgumentException("Task not found for this employee.");
+            } catch (SQLException e) { throw db(e); }
+        }
         public String description(){return "Connected to MySQL";}
         private static RuntimeException db(SQLException e){return new IllegalStateException("Database error: "+e.getMessage(),e);}
         interface SqlSetter{void set(PreparedStatement p)throws SQLException;}
     }
 
     static final class MemoryRepository implements LeaveRepository {
-        private final List<User> users=List.of(new User(1,"admin","System Administrator","ADMIN"),new User(2,"employee","Demo Employee","EMPLOYEE"));
+        private final List<User> users = new ArrayList<>();
+        MemoryRepository() {
+            users.add(new User(1, "admin", "System Administrator", "ADMIN"));
+            for (DemoEmployee employee : DEMO_EMPLOYEES)
+                users.add(new User(users.size() + 1L, employee.name(), employee.name(), "EMPLOYEE"));
+        }
         private final List<LeaveRequest> leaves=new ArrayList<>(); private long next=1;
-        public User authenticate(String u,String p){return users.stream().filter(x->x.username().equals(u)&&p.equals(x.role().equals("ADMIN")?"admin123":"employee123")).findFirst().orElse(null);}
+        private final List<AssignedTask> tasks = new ArrayList<>(); private long nextTask = 1;
+        public User authenticate(String u,String p){return users.stream().filter(x->x.username().equals(u)&&p.equals(x.role().equals("ADMIN")?"admin123":x.name())).findFirst().orElse(null);}
         public synchronized void create(long eid,String type,LocalDate start,LocalDate end,String reason){String name=users.stream().filter(u->u.id()==eid).findFirst().orElseThrow().name();leaves.add(new LeaveRequest(next++,eid,name,type,start,end,reason,"PENDING",""));}
         public synchronized List<LeaveRequest> findForEmployee(long eid){return leaves.stream().filter(x->x.employeeId()==eid).toList();}
         public synchronized List<LeaveRequest> findAll(boolean pending){return leaves.stream().filter(x->!pending||x.status().equals("PENDING")).toList();}
         public synchronized void decide(long id,String status,String comment){for(int i=0;i<leaves.size();i++){LeaveRequest x=leaves.get(i);if(x.id()==id){if(!x.status().equals("PENDING"))throw new IllegalStateException("Request was already processed.");leaves.set(i,new LeaveRequest(x.id(),x.employeeId(),x.employee(),x.type(),x.start(),x.end(),x.reason(),status,comment));return;}}throw new IllegalArgumentException("Request not found.");}
+        public List<User> findEmployees() { return users.stream().filter(u -> u.role().equals("EMPLOYEE")).toList(); }
+        private User requireUser(long id, String role) {
+            return users.stream().filter(u -> u.id() == id && u.role().equals(role)).findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("A valid " + role.toLowerCase() + " is required."));
+        }
+        public synchronized void assignTask(long adminId, long employeeId, String title, String instructions, LocalDate dueDate) {
+            User admin = requireUser(adminId, "ADMIN"), employee = requireUser(employeeId, "EMPLOYEE");
+            validateTask(title, instructions, dueDate);
+            tasks.add(new AssignedTask(nextTask++, employeeId, employee.name(), adminId, admin.name(), title.trim(), instructions.trim(), dueDate, "TODO"));
+        }
+        public synchronized List<AssignedTask> findTasks(long viewerId) {
+            User viewer = users.stream().filter(u -> u.id() == viewerId).findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("User not found."));
+            return tasks.stream().filter(t -> viewer.role().equals("ADMIN") || t.employeeId() == viewerId)
+                    .sorted(java.util.Comparator.comparing((AssignedTask t) -> t.status().equals("COMPLETED"))
+                            .thenComparing(AssignedTask::dueDate, java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()))
+                            .thenComparing(java.util.Comparator.comparingLong(AssignedTask::id).reversed())).toList();
+        }
+        public synchronized void updateTaskStatus(long employeeId, long taskId, String status) {
+            requireUser(employeeId, "EMPLOYEE"); validateTaskStatus(status);
+            for (int i = 0; i < tasks.size(); i++) {
+                AssignedTask task = tasks.get(i);
+                if (task.id() == taskId && task.employeeId() == employeeId) {
+                    tasks.set(i, new AssignedTask(task.id(), task.employeeId(), task.employee(), task.assignedBy(), task.admin(),
+                            task.title(), task.instructions(), task.dueDate(), status));
+                    return;
+                }
+            }
+            throw new IllegalArgumentException("Task not found for this employee.");
+        }
         public String description(){return "Demo mode (MySQL not connected)";}
     }
 }

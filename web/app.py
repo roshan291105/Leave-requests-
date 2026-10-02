@@ -20,7 +20,7 @@ from demo_employees import seed_demo_employees
 from reminders import admin_reminder_data, init_reminder_schema
 
 BASE_DIR = Path(__file__).resolve().parent
-load_dotenv(BASE_DIR / ".env", override=True)
+load_dotenv(BASE_DIR / ".env", override=False)
 pg_url = (
     f"postgresql://"
     f"{quote(os.getenv('PGUSER', ''), safe='')}:"
@@ -31,7 +31,7 @@ pg_url = (
 app = Flask(__name__)
 app.config.update(
     SECRET_KEY=os.getenv("LEAVE_SECRET", "change-me-in-production"),
-    DATABASE=os.getenv("DATABASE_URL") or pg_url
+    DATABASE=os.getenv("DATABASE_URL") or (pg_url if os.getenv("PGHOST") else BASE_DIR / "leave.db")
 )
 def pg_connection():
     return psycopg.connect(
@@ -199,15 +199,19 @@ def init_db(seed_demo=True):
     if db().backend == "postgresql":
         schema = (BASE_DIR.parent / "database" / "postgresql_schema.sql").read_text(encoding="utf-8")
     db().executescript(schema)
-    user_columns = db().columns("users")
-    task_columns = db().columns("tasks")
-    if "duration_minutes" not in task_columns:
-        db().execute("ALTER TABLE tasks ADD COLUMN duration_minutes INTEGER NOT NULL DEFAULT 60 CHECK(duration_minutes BETWEEN 15 AND 60000)")
+    # Workers may initialize together. Inspect and upgrade columns under the
+    # same write lock so a second worker cannot act on an outdated column list.
+    with db():
+        db().begin_write()
+        user_columns = db().columns("users")
+        task_columns = db().columns("tasks")
+        if "duration_minutes" not in task_columns:
+            db().execute("ALTER TABLE tasks ADD COLUMN duration_minutes INTEGER NOT NULL DEFAULT 60 CHECK(duration_minutes BETWEEN 15 AND 60000)")
+        if "employee_code" not in user_columns:
+            db().execute("ALTER TABLE users ADD COLUMN employee_code TEXT")
+        if "employment_type" not in user_columns:
+            db().execute("ALTER TABLE users ADD COLUMN employment_type TEXT NOT NULL DEFAULT 'Permanent'")
     init_reminder_schema(db())
-    if "employee_code" not in user_columns:
-        db().execute("ALTER TABLE users ADD COLUMN employee_code TEXT")
-    if "employment_type" not in user_columns:
-        db().execute("ALTER TABLE users ADD COLUMN employment_type TEXT NOT NULL DEFAULT 'Permanent'")
     if not seed_demo:
         db().commit()
         return

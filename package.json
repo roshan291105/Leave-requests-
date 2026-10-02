@@ -1,0 +1,13 @@
+{
+  "name": "dayora-web-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Node.js entry point for the Dayora Flask website and backend data",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test web/test_server.cjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
