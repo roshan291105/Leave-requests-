@@ -208,12 +208,31 @@ document.querySelectorAll('[data-task-title-select]').forEach((select) => {
 document.querySelectorAll('.schedule-row .switch input').forEach((checkbox) => {
   const row = checkbox.closest('.schedule-row');
   const label = checkbox.closest('.switch').querySelector('span');
-  const timeInputs = row.querySelectorAll('input[type="time"]');
-  const refreshScheduleRow = () => {
-    label.textContent = checkbox.checked ? 'Working' : 'Day off';
-    timeInputs.forEach((input) => { input.disabled = !checkbox.checked; });
+  const startInput = row.querySelector('input[name^="start_"]');
+  const endInput = row.querySelector('input[name^="end_"]');
+  const dayName = row.querySelector('strong').textContent.trim();
+  const validateTimes = () => {
+    endInput.setCustomValidity('');
+    if (checkbox.checked && startInput.value && endInput.value &&
+        endInput.value <= startInput.value) {
+      endInput.setCustomValidity(`${dayName}: end time must be after start time.`);
+    }
   };
-  checkbox.addEventListener('change', refreshScheduleRow);
+  const refreshScheduleRow = (fillDefaults = false) => {
+    label.textContent = checkbox.checked ? 'Working' : 'Day off';
+    [startInput, endInput].forEach((input) => {
+      input.disabled = !checkbox.checked;
+      input.required = checkbox.checked;
+    });
+    if (checkbox.checked && fillDefaults) {
+      if (!startInput.value) startInput.value = row.dataset.defaultStart || '09:00';
+      if (!endInput.value) endInput.value = row.dataset.defaultEnd || '18:00';
+    }
+    validateTimes();
+  };
+  checkbox.addEventListener('change', () => refreshScheduleRow(true));
+  [startInput, endInput].forEach((input) => input.addEventListener('input', validateTimes));
+  window.addEventListener('pageshow', () => refreshScheduleRow());
   refreshScheduleRow();
 });
 
